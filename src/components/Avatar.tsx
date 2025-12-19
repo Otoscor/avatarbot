@@ -234,7 +234,16 @@ export default function Avatar() {
 
   // 오디오 재생 및 립싱크 설정
   useEffect(() => {
-    if (!currentAudio || !vrm) return;
+    console.log("Avatar: 오디오 재생 시도", {
+      hasAudio: !!currentAudio,
+      audioLength: currentAudio?.length,
+      hasVrm: !!vrm,
+    });
+    
+    if (!currentAudio || !vrm) {
+      console.log("Avatar: 오디오 또는 VRM이 없어서 재생하지 않음");
+      return;
+    }
 
     // 기존 오디오 정리
     if (audioRef.current) {
@@ -278,13 +287,15 @@ export default function Avatar() {
     dataArrayRef.current = dataArray;
 
     // 오디오 재생
+    console.log("Avatar: 오디오 재생 시작");
     audio
       .play()
       .then(() => {
+        console.log("Avatar: 오디오 재생 성공");
         setAudioPlaying(true);
       })
       .catch((error) => {
-        console.error("오디오 재생 오류:", error);
+        console.error("Avatar: 오디오 재생 오류:", error);
         setAudioPlaying(false);
       });
 

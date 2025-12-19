@@ -77,6 +77,7 @@ export default function ChatInterface() {
   const isListeningRef = useRef<boolean>(false);
   const messageDisplayTimerRef = useRef<NodeJS.Timeout | null>(null); // 답변 표시 타이머
   const [showMessage, setShowMessage] = useState(false); // 답변 표시 여부
+  const [interimTranscript, setInterimTranscript] = useState(""); // 중간 결과 (말하는 중 표시용)
   const permissionDeniedRef = useRef<boolean>(false); // 권한 거부 ref (재시도 방지용)
   const {
     messages,
@@ -409,6 +410,9 @@ export default function ChatInterface() {
       if (finalTranscript) {
         const messageText = finalTranscript.trim();
         console.log("최종 결과 - 바로 전송:", messageText);
+        
+        // 중간 결과 초기화
+        setInterimTranscript("");
 
         if (messageText && !isLoading) {
           // 사용자 메시지 추가
@@ -448,38 +452,38 @@ export default function ChatInterface() {
             })
             .then((data) => {
               console.log("API 응답 받음:", data);
-              
+
               // 응답의 text를 채팅창에 추가
               if (data.text) {
                 addMessage({
                   role: "assistant",
                   content: data.text,
                 });
-                
+
                 // 답변 표시 시작
                 setShowMessage(true);
-                
+
                 // 기존 타이머 정리
                 if (messageDisplayTimerRef.current) {
                   clearTimeout(messageDisplayTimerRef.current);
                 }
-                
+
                 // 5초 후 답변 숨김
                 messageDisplayTimerRef.current = setTimeout(() => {
                   setShowMessage(false);
                 }, 5000);
               }
-              
+
               // emotion 상태 업데이트
               if (data.emotion) {
                 setEmotion(data.emotion);
               }
-              
+
               // audio 상태 업데이트
               if (data.audio) {
                 setAudio(data.audio);
               }
-              
+
               setLoading(false);
             })
             .catch((error) => {
@@ -489,10 +493,14 @@ export default function ChatInterface() {
         }
       }
 
-      // 중간 결과가 있으면 "말하는 중" 상태로 변경
+      // 중간 결과가 있으면 "말하는 중" 상태로 변경 및 자막에 표시
       if (interimTranscript && !finalTranscript) {
         console.log("중간 결과:", interimTranscript);
+        setInterimTranscript(interimTranscript);
         setListeningState("speaking");
+      } else if (!interimTranscript && !finalTranscript) {
+        // 중간 결과가 없으면 초기화
+        setInterimTranscript("");
       }
     };
 
@@ -817,6 +825,20 @@ export default function ChatInterface() {
                 >
                   {currentMessage.content}
                 </p>
+              ) : listeningState === "speaking" && interimTranscript ? (
+                <span
+                  style={{
+                    color: "#FFF",
+                    fontFamily: '"Pretendard Variable", Pretendard, sans-serif',
+                    fontSize: "13px",
+                    fontStyle: "normal",
+                    fontWeight: 400,
+                    lineHeight: "20px",
+                    letterSpacing: "-0.26px",
+                  }}
+                >
+                  {interimTranscript}
+                </span>
               ) : listeningState === "listening" && !isMuted ? (
                 <span
                   style={{
