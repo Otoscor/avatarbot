@@ -260,10 +260,15 @@ export default function ChatInterface() {
   useEffect(() => {
     // 브라우저 호환성 확인
     const SpeechRecognition =
-      window.SpeechRecognition || window.webkitSpeechRecognition;
+      window.SpeechRecognition || (window as any).webkitSpeechRecognition;
 
     if (!SpeechRecognition) {
       console.warn("이 브라우저는 음성 인식을 지원하지 않습니다.");
+      console.warn("사용 가능한 API:", {
+        SpeechRecognition: !!window.SpeechRecognition,
+        webkitSpeechRecognition: !!(window as any).webkitSpeechRecognition,
+        userAgent: navigator.userAgent,
+      });
       return;
     }
 
@@ -272,6 +277,19 @@ export default function ChatInterface() {
     recognition.continuous = true; // 연속 인식
     recognition.interimResults = true; // 중간 결과도 받기
     recognition.lang = "ko-KR"; // 한국어 설정
+    
+    console.log("음성 인식 초기화 완료:", {
+      continuous: recognition.continuous,
+      interimResults: recognition.interimResults,
+      lang: recognition.lang,
+      userAgent: navigator.userAgent,
+    });
+    
+    console.log("음성 인식 초기화 완료:", {
+      continuous: recognition.continuous,
+      interimResults: recognition.interimResults,
+      lang: recognition.lang,
+    });
 
     // 인식 결과 처리
     recognition.onresult = (event: SpeechRecognitionEvent) => {
@@ -307,11 +325,36 @@ export default function ChatInterface() {
 
     // 에러 처리
     recognition.onerror = (event: SpeechRecognitionErrorEvent) => {
-      console.error("음성 인식 오류:", event.error);
+      console.error("음성 인식 오류:", {
+        error: event.error,
+        message: event.message,
+        type: event.error,
+      });
       setIsListening(false);
-      // 'no-speech' 에러는 무시 (침묵은 정상)
-      if (event.error !== "no-speech") {
-        setListeningState("listening");
+      isListeningRef.current = false;
+      
+      // 특정 에러 타입별 처리
+      switch (event.error) {
+        case "no-speech":
+          // 침묵은 정상이므로 무시
+          break;
+        case "audio-capture":
+          console.error("마이크를 찾을 수 없습니다. 마이크 권한을 확인해주세요.");
+          alert("마이크를 찾을 수 없습니다. 브라우저 설정에서 마이크 권한을 허용해주세요.");
+          break;
+        case "not-allowed":
+          console.error("마이크 권한이 거부되었습니다.");
+          alert("마이크 권한이 필요합니다. 브라우저 설정에서 마이크 권한을 허용해주세요.");
+          break;
+        case "network":
+          console.error("네트워크 오류가 발생했습니다.");
+          break;
+        case "aborted":
+          // 사용자가 중단한 경우
+          break;
+        default:
+          console.error("알 수 없는 음성 인식 오류:", event.error);
+          setListeningState("listening");
       }
     };
 
@@ -348,8 +391,34 @@ export default function ChatInterface() {
 
     recognitionRef.current = recognition;
 
-    // 초기 시작
-    startRecognition();
+    // 사용자 상호작용 후 시작 (iOS Safari 호환성)
+    // 페이지 로드 시 자동 시작 대신, 사용자가 마이크 버튼을 클릭하거나 페이지와 상호작용한 후 시작
+    const handleUserInteraction = () => {
+      if (!isMuted && !isListeningRef.current) {
+        // 약간의 지연 후 시작 (브라우저 정책 준수)
+        setTimeout(() => {
+          startRecognition();
+        }, 300);
+      }
+      // 이벤트 리스너 제거
+      document.removeEventListener("click", handleUserInteraction);
+      document.removeEventListener("touchstart", handleUserInteraction);
+    };
+    
+    // 사용자 상호작용 대기
+    document.addEventListener("click", handleUserInteraction, { once: true });
+    document.addEventListener("touchstart", handleUserInteraction, { once: true });
+    
+    // 5초 후에도 상호작용이 없으면 자동 시작 시도
+    setTimeout(() => {
+      if (!isMuted && !isListeningRef.current && recognitionRef.current) {
+        try {
+          startRecognition();
+        } catch (error) {
+          console.warn("자동 시작 실패, 사용자 상호작용 대기 중:", error);
+        }
+      }
+    }, 5000);
 
     return () => {
       if (silenceTimerRef.current) {
@@ -358,6 +427,13 @@ export default function ChatInterface() {
       if (recognitionRef.current) {
         recognitionRef.current.stop();
         recognitionRef.current = null;
+      }
+      // 이벤트 리스너 정리
+      document.removeEventListener("click", handleUserInteraction);
+      document.removeEventListener("touchstart", handleUserInteraction);
+      document.removeEventListener("touchend", handleUserInteraction);
+      if (autoStartTimer) {
+        clearTimeout(autoStartTimer);
       }
     };
   }, [resetSilenceTimer, startRecognition, isMuted]);
@@ -503,11 +579,11 @@ export default function ChatInterface() {
           </div>
         )}
 
-      {/* 입력창 영역 */}
-      <div
-        className="w-full pointer-events-auto px-5"
-        style={{ marginBottom: "16px" }}
-      >
+        {/* 입력창 영역 */}
+        <div
+          className="w-full pointer-events-auto px-5"
+          style={{ marginBottom: "16px" }}
+        >
           <div
             className="flex items-center transition-all duration-300 ease-in-out"
             style={{
@@ -517,21 +593,36 @@ export default function ChatInterface() {
           >
             {/* 왼쪽 음소거 버튼 (텍스트 입력 중일 때는 숨김) */}
             <button
-              onClick={() => {
+              onClick={async () => {
                 if (isMuted) {
                   // 음소거 해제
                   setIsMuted(false);
                   autoRestartRef.current = true;
+                  
+                  // 마이크 권한 확인 및 요청 (iOS Safari 호환성)
+                  try {
+                    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+                      await navigator.mediaDevices.getUserMedia({ audio: true });
+                      console.log("마이크 권한 허용됨");
+                    }
+                  } catch (error) {
+                    console.error("마이크 권한 오류:", error);
+                    alert("마이크 권한이 필요합니다. 브라우저 설정에서 마이크 권한을 허용해주세요.");
+                    setIsMuted(true); // 권한이 없으면 음소거 상태 유지
+                    return;
+                  }
+                  
                   // 약간의 지연 후 시작
                   setTimeout(() => {
                     if (
                       !isLoading &&
                       !isAudioPlaying &&
-                      recognitionRef.current
+                      recognitionRef.current &&
+                      !isMuted
                     ) {
                       startRecognition();
                     }
-                  }, 100);
+                  }, 300);
                 } else {
                   // 음소거 활성화
                   setIsMuted(true);
