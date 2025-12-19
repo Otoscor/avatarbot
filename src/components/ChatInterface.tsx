@@ -391,7 +391,7 @@ export default function ChatInterface() {
         const result = event.results[i];
         const transcript = result[0].transcript;
         const isFinal = result.isFinal;
-        
+
         console.log(`결과 ${i}:`, {
           transcript,
           isFinal,
@@ -409,16 +409,19 @@ export default function ChatInterface() {
       if (finalTranscript) {
         const messageText = finalTranscript.trim();
         console.log("최종 결과 - 바로 전송:", messageText);
-        
-        if (messageText) {
-          // 입력창에 표시하지 않고 바로 메시지 전송
+
+        if (messageText && !isLoading) {
+          // 사용자 메시지 추가
           addMessage({
             role: "user",
             content: messageText,
           });
-          
-          // API 호출
+
+          // 로딩 시작
           setLoading(true);
+          setListeningState("processing");
+
+          // 최신 messages 상태를 가져오기 위해 함수형 업데이트 사용
           fetch("/api/chat", {
             method: "POST",
             headers: {
@@ -426,28 +429,57 @@ export default function ChatInterface() {
             },
             body: JSON.stringify({
               messages: [
-                ...messages,
+                ...messages.map((msg) => ({
+                  role: msg.role,
+                  content: msg.content,
+                })),
                 {
-                  role: "user",
+                  role: "user" as const,
                   content: messageText,
                 },
               ],
             }),
           })
-            .then((res) => res.json())
+            .then((res) => {
+              if (!res.ok) {
+                throw new Error("API 호출 실패");
+              }
+              return res.json();
+            })
             .then((data) => {
+              console.log("API 응답 받음:", data);
+              
+              // 응답의 text를 채팅창에 추가
               if (data.text) {
                 addMessage({
                   role: "assistant",
                   content: data.text,
                 });
+                
+                // 답변 표시 시작
+                setShowMessage(true);
+                
+                // 기존 타이머 정리
+                if (messageDisplayTimerRef.current) {
+                  clearTimeout(messageDisplayTimerRef.current);
+                }
+                
+                // 5초 후 답변 숨김
+                messageDisplayTimerRef.current = setTimeout(() => {
+                  setShowMessage(false);
+                }, 5000);
               }
+              
+              // emotion 상태 업데이트
               if (data.emotion) {
                 setEmotion(data.emotion);
               }
+              
+              // audio 상태 업데이트
               if (data.audio) {
                 setAudio(data.audio);
               }
+              
               setLoading(false);
             })
             .catch((error) => {
