@@ -212,48 +212,65 @@ export default function ChatInterface() {
   }, [inputValue, isLoading, isAudioPlaying, handleSend]);
 
   // 마이크 권한 확인 함수
-  const checkMicrophonePermission = useCallback(async (): Promise<boolean> => {
-    // 이미 권한이 거부된 경우 재시도하지 않음
-    if (permissionDeniedRef.current) {
-      return false;
-    }
-
-    try {
-      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
-        // 스트림 정리
-        stream.getTracks().forEach((track) => track.stop());
-        return true;
-      }
-      // getUserMedia가 없는 경우 (일부 환경) true 반환하여 시도
-      return true;
-    } catch (error: unknown) {
-      const err = error as DOMException;
-      // 권한 거부 또는 마이크 없음
-      if (
-        err.name === "NotAllowedError" ||
-        err.name === "PermissionDeniedError" ||
-        err.name === "NotFoundError" ||
-        err.name === "DevicesNotFoundError"
-      ) {
-        permissionDeniedRef.current = true;
-        setHasPermissionDenied(true);
-        console.warn("마이크 권한이 거부되었거나 마이크를 찾을 수 없습니다:", err.name);
-        // 토스트 메시지 표시 (한 번만)
-        setShowPermissionToast((prev) => {
-          if (!prev) {
-            setTimeout(() => setShowPermissionToast(false), 5000);
-            return true;
-          }
-          return prev;
-        });
+  const checkMicrophonePermission = useCallback(
+    async (forceRequest: boolean = false): Promise<boolean> => {
+      // 이미 권한이 거부된 경우 재시도하지 않음 (단, 강제 요청인 경우 제외)
+      if (permissionDeniedRef.current && !forceRequest) {
         return false;
       }
-      // 다른 에러는 로그만 남기고 시도 허용
-      console.warn("마이크 권한 확인 중 오류:", err.name);
-      return true;
-    }
-  }, []);
+
+      // 강제 요청인 경우 상태 리셋
+      if (forceRequest) {
+        permissionDeniedRef.current = false;
+        setHasPermissionDenied(false);
+      }
+
+      try {
+        if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+          const stream = await navigator.mediaDevices.getUserMedia({
+            audio: true,
+          });
+          // 스트림 정리
+          stream.getTracks().forEach((track) => track.stop());
+          // 권한 허용됨 - 상태 리셋
+          permissionDeniedRef.current = false;
+          setHasPermissionDenied(false);
+          return true;
+        }
+        // getUserMedia가 없는 경우 (일부 환경) true 반환하여 시도
+        return true;
+      } catch (error: unknown) {
+        const err = error as DOMException;
+        // 권한 거부 또는 마이크 없음
+        if (
+          err.name === "NotAllowedError" ||
+          err.name === "PermissionDeniedError" ||
+          err.name === "NotFoundError" ||
+          err.name === "DevicesNotFoundError"
+        ) {
+          permissionDeniedRef.current = true;
+          setHasPermissionDenied(true);
+          console.warn(
+            "마이크 권한이 거부되었거나 마이크를 찾을 수 없습니다:",
+            err.name
+          );
+          // 토스트 메시지 표시 (한 번만)
+          setShowPermissionToast((prev) => {
+            if (!prev) {
+              setTimeout(() => setShowPermissionToast(false), 5000);
+              return true;
+            }
+            return prev;
+          });
+          return false;
+        }
+        // 다른 에러는 로그만 남기고 시도 허용
+        console.warn("마이크 권한 확인 중 오류:", err.name);
+        return true;
+      }
+    },
+    []
+  );
 
   // 음성 인식 시작 (useCallback으로 메모이제이션)
   const startRecognition = useCallback(async () => {
@@ -473,7 +490,7 @@ export default function ChatInterface() {
       if (permissionDeniedRef.current) {
         return;
       }
-      
+
       if (!isMuted && !isListeningRef.current) {
         // 약간의 지연 후 시작 (브라우저 정책 준수)
         setTimeout(() => {
@@ -704,18 +721,15 @@ export default function ChatInterface() {
             {/* 왼쪽 음소거 버튼 (텍스트 입력 중일 때는 숨김) */}
             <button
               onClick={async () => {
-                // 권한이 거부된 경우 아무 동작도 하지 않음
-                if (permissionDeniedRef.current) {
-                  return;
-                }
-
                 if (isMuted) {
                   // 음소거 해제
                   setIsMuted(false);
                   autoRestartRef.current = true;
 
-                  // 마이크 권한 확인
-                  const hasPermission = await checkMicrophonePermission();
+                  // 마이크 권한 확인 (권한이 거부된 경우에도 강제로 다시 요청)
+                  const hasPermission = await checkMicrophonePermission(
+                    permissionDeniedRef.current
+                  );
                   if (!hasPermission) {
                     setIsMuted(true); // 권한이 없으면 음소거 상태 유지
                     return;
@@ -759,16 +773,16 @@ export default function ChatInterface() {
                 background: hasPermissionDenied
                   ? "#9CA3AF"
                   : isMuted
-                    ? "#FF4F4F"
-                    : "#FFF",
+                  ? "#FF4F4F"
+                  : "#FFF",
                 backdropFilter: "blur(10px)",
               }}
               title={
                 hasPermissionDenied
                   ? "마이크 권한이 필요합니다"
                   : isMuted
-                    ? "음소거 해제"
-                    : "음소거"
+                  ? "음소거 해제"
+                  : "음소거"
               }
             >
               {isMuted ? (
