@@ -1,0 +1,42 @@
+"use client";
+
+import { Canvas } from "@react-three/fiber";
+import { Suspense } from "react";
+import { Environment, ContactShadows } from "@react-three/drei";
+import Avatar from "./Avatar";
+
+export default function AvatarCanvas() {
+  return (
+    <div className="h-screen w-full">
+      <Canvas
+        camera={{ position: [0, 0.2, 0.8], fov: 55 }}
+        gl={{ antialias: true }}
+      >
+        {/* 환경 설정 - 실내 느낌의 배경 */}
+        <Suspense fallback={null}>
+          <Environment preset="apartment" background />
+        </Suspense>
+
+        {/* 조명 설정 */}
+        <ambientLight intensity={0.4} />
+        <directionalLight position={[5, 5, 5]} intensity={0.8} castShadow />
+        <directionalLight position={[-5, 3, -5]} intensity={0.3} />
+
+        {/* 아바타 모델 */}
+        <Suspense fallback={null}>
+          <Avatar />
+        </Suspense>
+
+        {/* 그림자 효과 - 캐릭터 발 밑 */}
+        <ContactShadows
+          position={[0, -1.2, 0]}
+          opacity={0.4}
+          scale={2}
+          blur={2}
+          far={1}
+          resolution={256}
+        />
+      </Canvas>
+    </div>
+  );
+}
