@@ -239,7 +239,7 @@ export default function Avatar() {
       audioLength: currentAudio?.length,
       hasVrm: !!vrm,
     });
-    
+
     if (!currentAudio || !vrm) {
       console.log("Avatar: 오디오 또는 VRM이 없어서 재생하지 않음");
       return;
@@ -286,18 +286,57 @@ export default function Avatar() {
     const dataArray = new Uint8Array(bufferLength);
     dataArrayRef.current = dataArray;
 
-    // 오디오 재생
+    // 오디오 재생 (사용자 상호작용 후에만 가능)
     console.log("Avatar: 오디오 재생 시작");
-    audio
-      .play()
-      .then(() => {
+    
+    // 사용자 상호작용 확인을 위한 함수
+    const playAudio = async () => {
+      try {
+        await audio.play();
         console.log("Avatar: 오디오 재생 성공");
         setAudioPlaying(true);
-      })
-      .catch((error) => {
+      } catch (error: any) {
         console.error("Avatar: 오디오 재생 오류:", error);
-        setAudioPlaying(false);
-      });
+        
+        // NotAllowedError인 경우 사용자 상호작용 대기
+        if (error.name === "NotAllowedError" || error.name === "NotSupportedError") {
+          console.log("Avatar: 사용자 상호작용 필요, 재시도 대기 중...");
+          
+          // 사용자 상호작용 이벤트 리스너 추가
+          const handleUserInteraction = async () => {
+            try {
+              await audio.play();
+              console.log("Avatar: 사용자 상호작용 후 오디오 재생 성공");
+              setAudioPlaying(true);
+            } catch (retryError) {
+              console.error("Avatar: 재시도 실패:", retryError);
+              setAudioPlaying(false);
+            }
+            
+            // 이벤트 리스너 제거
+            document.removeEventListener("click", handleUserInteraction);
+            document.removeEventListener("touchstart", handleUserInteraction);
+          };
+          
+          // 클릭 또는 터치 이벤트 대기
+          document.addEventListener("click", handleUserInteraction, { once: true });
+          document.addEventListener("touchstart", handleUserInteraction, { once: true });
+          
+          // 5초 후에도 상호작용이 없으면 포기
+          setTimeout(() => {
+            document.removeEventListener("click", handleUserInteraction);
+            document.removeEventListener("touchstart", handleUserInteraction);
+            console.warn("Avatar: 사용자 상호작용 시간 초과, 오디오 재생 포기");
+            setAudioPlaying(false);
+          }, 5000);
+        } else {
+          setAudioPlaying(false);
+        }
+      }
+    };
+    
+    // 즉시 재생 시도
+    playAudio();
 
     // 오디오 종료 시 정리
     audio.onended = () => {

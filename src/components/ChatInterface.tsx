@@ -410,7 +410,7 @@ export default function ChatInterface() {
       if (finalTranscript) {
         const messageText = finalTranscript.trim();
         console.log("최종 결과 - 바로 전송:", messageText);
-        
+
         // 중간 결과 초기화
         setInterimTranscript("");
 
