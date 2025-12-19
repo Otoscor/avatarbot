@@ -592,6 +592,29 @@ export default function ChatInterface() {
             "linear-gradient(to top, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.2) 15%, transparent 20%)",
         }}
       />
+      {/* 권한 거부 토스트 메시지 */}
+      {showPermissionToast && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 pointer-events-none">
+          <div
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg shadow-lg"
+            style={{
+              background: "rgba(0, 0, 0, 0.8)",
+              backdropFilter: "blur(10px)",
+            }}
+          >
+            <span
+              style={{
+                color: "#FFF",
+                fontFamily: '"Pretendard Variable", Pretendard, sans-serif',
+                fontSize: "13px",
+                fontWeight: 400,
+              }}
+            >
+              마이크 권한이 필요합니다
+            </span>
+          </div>
+        </div>
+      )}
       <div className="fixed inset-0 pointer-events-none z-10 flex flex-col justify-end items-center pb-4 px-3 sm:pb-8 sm:px-4">
         {/* 듣는 중 인디케이터 / 답변 표시 */}
         {((listeningState === "listening" && !isMuted) ||
