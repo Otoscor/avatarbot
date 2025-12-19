@@ -391,17 +391,18 @@ export default function Avatar() {
 
       // VRM lookAt 적용 - lookAtTarget 속성 직접 설정
       try {
+        const lookAt = vrm.lookAt as any;
         // VRM 3.x 버전에서는 lookAtTarget 속성에 Vector3를 직접 할당
-        if (vrm.lookAt.lookAtTarget) {
-          vrm.lookAt.lookAtTarget.copy(targetLookAtRef.current);
-        } else if ("target" in vrm.lookAt) {
+        if (lookAt.lookAtTarget) {
+          lookAt.lookAtTarget.copy(targetLookAtRef.current);
+        } else if (lookAt.target) {
           // target 속성이 있는 경우
-          (vrm.lookAt as any).target = targetLookAtRef.current;
+          lookAt.target = targetLookAtRef.current;
         }
 
         // lookAt 업데이트 (필요한 경우)
-        if (typeof (vrm.lookAt as any).update === "function") {
-          (vrm.lookAt as any).update(delta);
+        if (typeof lookAt.update === "function") {
+          lookAt.update(delta);
         }
       } catch (error) {
         console.warn("lookAt 적용 중 오류:", error);
