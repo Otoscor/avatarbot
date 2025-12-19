@@ -62,6 +62,8 @@ export default function ChatInterface() {
   const [isMuted, setIsMuted] = useState(false); // 음소거 상태
   const [listeningState, setListeningState] =
     useState<ListeningState>("listening");
+  const [hasPermissionDenied, setHasPermissionDenied] = useState(false); // 권한 거부 상태
+  const [showPermissionToast, setShowPermissionToast] = useState(false); // 권한 토스트 표시 여부
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const autoRestartRef = useRef<boolean>(false); // 자동 재시작 플래그
@@ -70,6 +72,7 @@ export default function ChatInterface() {
   const isListeningRef = useRef<boolean>(false);
   const messageDisplayTimerRef = useRef<NodeJS.Timeout | null>(null); // 답변 표시 타이머
   const [showMessage, setShowMessage] = useState(false); // 답변 표시 여부
+  const permissionDeniedRef = useRef<boolean>(false); // 권한 거부 ref (재시도 방지용)
   const {
     messages,
     isLoading,
@@ -208,13 +211,65 @@ export default function ChatInterface() {
     }, 1500);
   }, [inputValue, isLoading, isAudioPlaying, handleSend]);
 
+  // 마이크 권한 확인 함수
+  const checkMicrophonePermission = useCallback(async (): Promise<boolean> => {
+    // 이미 권한이 거부된 경우 재시도하지 않음
+    if (permissionDeniedRef.current) {
+      return false;
+    }
+
+    try {
+      if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
+        const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+        // 스트림 정리
+        stream.getTracks().forEach((track) => track.stop());
+        return true;
+      }
+      // getUserMedia가 없는 경우 (일부 환경) true 반환하여 시도
+      return true;
+    } catch (error: any) {
+      const err = error as DOMException;
+      // 권한 거부 또는 마이크 없음
+      if (
+        err.name === "NotAllowedError" ||
+        err.name === "PermissionDeniedError" ||
+        err.name === "NotFoundError" ||
+        err.name === "DevicesNotFoundError"
+      ) {
+        permissionDeniedRef.current = true;
+        setHasPermissionDenied(true);
+        console.warn("마이크 권한이 거부되었거나 마이크를 찾을 수 없습니다:", err.name);
+        // 토스트 메시지 표시 (한 번만)
+        if (!showPermissionToast) {
+          setShowPermissionToast(true);
+          setTimeout(() => setShowPermissionToast(false), 5000);
+        }
+        return false;
+      }
+      // 다른 에러는 로그만 남기고 시도 허용
+      console.warn("마이크 권한 확인 중 오류:", err.name);
+      return true;
+    }
+  }, [showPermissionToast]);
+
   // 음성 인식 시작 (useCallback으로 메모이제이션)
-  const startRecognition = useCallback(() => {
+  const startRecognition = useCallback(async () => {
     if (!recognitionRef.current) return;
     // 이미 시작된 상태면 중복 호출 방지
     if (isListeningRef.current) return;
     // 음소거 상태면 시작하지 않음
     if (isMuted) return;
+    // 권한이 거부된 경우 시작하지 않음
+    if (permissionDeniedRef.current) {
+      console.warn("마이크 권한이 거부되어 음성 인식을 시작할 수 없습니다.");
+      return;
+    }
+
+    // 권한 확인
+    const hasPermission = await checkMicrophonePermission();
+    if (!hasPermission) {
+      return;
+    }
 
     try {
       recognitionRef.current.start();
@@ -239,7 +294,7 @@ export default function ChatInterface() {
       isListeningRef.current = false;
       setIsListening(false);
     }
-  }, [isMuted]);
+  }, [isMuted, checkMicrophonePermission]);
 
   // 음성 인식 중지
   const stopRecognition = () => {
@@ -277,14 +332,14 @@ export default function ChatInterface() {
     recognition.continuous = true; // 연속 인식
     recognition.interimResults = true; // 중간 결과도 받기
     recognition.lang = "ko-KR"; // 한국어 설정
-    
+
     console.log("음성 인식 초기화 완료:", {
       continuous: recognition.continuous,
       interimResults: recognition.interimResults,
       lang: recognition.lang,
       userAgent: navigator.userAgent,
     });
-    
+
     console.log("음성 인식 초기화 완료:", {
       continuous: recognition.continuous,
       interimResults: recognition.interimResults,
@@ -332,19 +387,28 @@ export default function ChatInterface() {
       });
       setIsListening(false);
       isListeningRef.current = false;
-      
+      autoRestartRef.current = false; // 재시도 방지
+
       // 특정 에러 타입별 처리
       switch (event.error) {
         case "no-speech":
           // 침묵은 정상이므로 무시
           break;
         case "audio-capture":
-          console.error("마이크를 찾을 수 없습니다. 마이크 권한을 확인해주세요.");
-          alert("마이크를 찾을 수 없습니다. 브라우저 설정에서 마이크 권한을 허용해주세요.");
-          break;
         case "not-allowed":
-          console.error("마이크 권한이 거부되었습니다.");
-          alert("마이크 권한이 필요합니다. 브라우저 설정에서 마이크 권한을 허용해주세요.");
+          // 권한 거부 또는 마이크 없음 - 재시도 방지
+          permissionDeniedRef.current = true;
+          setHasPermissionDenied(true);
+          console.warn(
+            "마이크 권한이 거부되었거나 마이크를 찾을 수 없습니다. 음성 인식 기능이 비활성화됩니다."
+          );
+          // 토스트 메시지 표시 (한 번만)
+          if (!showPermissionToast) {
+            setShowPermissionToast(true);
+            setTimeout(() => setShowPermissionToast(false), 5000);
+          }
+          // 자동 재시작 방지
+          autoRestartRef.current = false;
           break;
         case "network":
           console.error("네트워크 오류가 발생했습니다.");
@@ -363,13 +427,20 @@ export default function ChatInterface() {
       isListeningRef.current = false;
       setIsListening(false);
 
+      // 권한이 거부된 경우 재시작하지 않음
+      if (permissionDeniedRef.current) {
+        autoRestartRef.current = false;
+        return;
+      }
+
       // 의도적으로 중지한 경우가 아니고, AI가 말하지 않고, 로딩 중이 아니고, 음소거 상태가 아닐 때만 재시작
       if (
         autoRestartRef.current &&
         !isAudioPlayingRef.current &&
         !isLoadingRef.current &&
         recognitionRef.current && // recognition이 여전히 존재하는지 확인
-        !isMuted // 음소거 상태가 아닐 때만
+        !isMuted && // 음소거 상태가 아닐 때만
+        !permissionDeniedRef.current // 권한이 거부되지 않았을 때만
       ) {
         // 약간의 지연 후 재시작 (브라우저 정책 준수)
         setTimeout(() => {
@@ -379,7 +450,8 @@ export default function ChatInterface() {
             !isLoadingRef.current &&
             recognitionRef.current &&
             !isListeningRef.current &&
-            !isMuted
+            !isMuted &&
+            !permissionDeniedRef.current
           ) {
             startRecognition();
           }
@@ -393,25 +465,39 @@ export default function ChatInterface() {
 
     // 사용자 상호작용 후 시작 (iOS Safari 호환성)
     // 페이지 로드 시 자동 시작 대신, 사용자가 마이크 버튼을 클릭하거나 페이지와 상호작용한 후 시작
-    const handleUserInteraction = () => {
+    const handleUserInteraction = async () => {
+      // 권한이 거부된 경우 시작하지 않음
+      if (permissionDeniedRef.current) {
+        return;
+      }
+      
       if (!isMuted && !isListeningRef.current) {
         // 약간의 지연 후 시작 (브라우저 정책 준수)
         setTimeout(() => {
-          startRecognition();
+          if (!permissionDeniedRef.current) {
+            startRecognition();
+          }
         }, 300);
       }
       // 이벤트 리스너 제거
       document.removeEventListener("click", handleUserInteraction);
       document.removeEventListener("touchstart", handleUserInteraction);
     };
-    
+
     // 사용자 상호작용 대기
     document.addEventListener("click", handleUserInteraction, { once: true });
-    document.addEventListener("touchstart", handleUserInteraction, { once: true });
-    
+    document.addEventListener("touchstart", handleUserInteraction, {
+      once: true,
+    });
+
     // 5초 후에도 상호작용이 없으면 자동 시작 시도
     const autoStartTimer = setTimeout(() => {
-      if (!isMuted && !isListeningRef.current && recognitionRef.current) {
+      if (
+        !isMuted &&
+        !isListeningRef.current &&
+        recognitionRef.current &&
+        !permissionDeniedRef.current
+      ) {
         try {
           startRecognition();
         } catch (error) {
@@ -434,7 +520,7 @@ export default function ChatInterface() {
       document.removeEventListener("touchend", handleUserInteraction);
       clearTimeout(autoStartTimer);
     };
-  }, [resetSilenceTimer, startRecognition, isMuted]);
+  }, [resetSilenceTimer, startRecognition, isMuted, checkMicrophonePermission]);
 
   // ref 업데이트
   useEffect(() => {
@@ -592,31 +678,31 @@ export default function ChatInterface() {
             {/* 왼쪽 음소거 버튼 (텍스트 입력 중일 때는 숨김) */}
             <button
               onClick={async () => {
+                // 권한이 거부된 경우 아무 동작도 하지 않음
+                if (permissionDeniedRef.current) {
+                  return;
+                }
+
                 if (isMuted) {
                   // 음소거 해제
                   setIsMuted(false);
                   autoRestartRef.current = true;
-                  
-                  // 마이크 권한 확인 및 요청 (iOS Safari 호환성)
-                  try {
-                    if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
-                      await navigator.mediaDevices.getUserMedia({ audio: true });
-                      console.log("마이크 권한 허용됨");
-                    }
-                  } catch (error) {
-                    console.error("마이크 권한 오류:", error);
-                    alert("마이크 권한이 필요합니다. 브라우저 설정에서 마이크 권한을 허용해주세요.");
+
+                  // 마이크 권한 확인
+                  const hasPermission = await checkMicrophonePermission();
+                  if (!hasPermission) {
                     setIsMuted(true); // 권한이 없으면 음소거 상태 유지
                     return;
                   }
-                  
+
                   // 약간의 지연 후 시작
                   setTimeout(() => {
                     if (
                       !isLoading &&
                       !isAudioPlaying &&
                       recognitionRef.current &&
-                      !isMuted
+                      !isMuted &&
+                      !permissionDeniedRef.current
                     ) {
                       startRecognition();
                     }
@@ -630,7 +716,12 @@ export default function ChatInterface() {
                   autoRestartRef.current = false;
                 }
               }}
-              disabled={isLoading || isAudioPlaying}
+              disabled={
+                isLoading ||
+                isAudioPlaying ||
+                permissionDeniedRef.current ||
+                hasPermissionDenied
+              }
               className="flex flex-col justify-center items-center flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden transition-all duration-300 ease-in-out"
               style={{
                 width: inputValue.trim() ? "0px" : "44px",
@@ -639,10 +730,20 @@ export default function ChatInterface() {
                 opacity: inputValue.trim() ? 0 : 1,
                 borderRadius: "16px",
                 border: "1.5px solid #D3D3D3",
-                background: isMuted ? "#FF4F4F" : "#FFF",
+                background: hasPermissionDenied
+                  ? "#9CA3AF"
+                  : isMuted
+                    ? "#FF4F4F"
+                    : "#FFF",
                 backdropFilter: "blur(10px)",
               }}
-              title={isMuted ? "음소거 해제" : "음소거"}
+              title={
+                hasPermissionDenied
+                  ? "마이크 권한이 필요합니다"
+                  : isMuted
+                    ? "음소거 해제"
+                    : "음소거"
+              }
             >
               {isMuted ? (
                 <MicOff className="w-5 h-5 text-white" />
