@@ -277,12 +277,15 @@ export default function Avatar() {
     dataArrayRef.current = dataArray;
 
     // 오디오 재생
-    audio.play().then(() => {
-      setAudioPlaying(true);
-    }).catch((error) => {
-      console.error("오디오 재생 오류:", error);
-      setAudioPlaying(false);
-    });
+    audio
+      .play()
+      .then(() => {
+        setAudioPlaying(true);
+      })
+      .catch((error) => {
+        console.error("오디오 재생 오류:", error);
+        setAudioPlaying(false);
+      });
 
     // 오디오 종료 시 정리
     audio.onended = () => {
@@ -410,8 +413,9 @@ export default function Avatar() {
 
       // 각도 제한 적용 (최대 30도 = 약 0.5 라디안)
       try {
-        if (vrm.lookAt.rangeOfMovementRestriction) {
-          const restriction = vrm.lookAt.rangeOfMovementRestriction;
+        const lookAt = vrm.lookAt as any;
+        if (lookAt.rangeOfMovementRestriction) {
+          const restriction = lookAt.rangeOfMovementRestriction;
           if (restriction.yaw !== undefined) {
             restriction.yaw = 0.5; // ±30도 (약 0.5 라디안)
           }
