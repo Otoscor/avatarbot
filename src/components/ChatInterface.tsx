@@ -410,7 +410,7 @@ export default function ChatInterface() {
     document.addEventListener("touchstart", handleUserInteraction, { once: true });
     
     // 5초 후에도 상호작용이 없으면 자동 시작 시도
-    setTimeout(() => {
+    const autoStartTimer = setTimeout(() => {
       if (!isMuted && !isListeningRef.current && recognitionRef.current) {
         try {
           startRecognition();
@@ -432,9 +432,7 @@ export default function ChatInterface() {
       document.removeEventListener("click", handleUserInteraction);
       document.removeEventListener("touchstart", handleUserInteraction);
       document.removeEventListener("touchend", handleUserInteraction);
-      if (autoStartTimer) {
-        clearTimeout(autoStartTimer);
-      }
+      clearTimeout(autoStartTimer);
     };
   }, [resetSilenceTimer, startRecognition, isMuted]);
 
