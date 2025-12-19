@@ -503,11 +503,11 @@ export default function ChatInterface() {
           </div>
         )}
 
-        {/* 입력창 영역 */}
-        <div
-          className="w-full pointer-events-auto"
-          style={{ margin: "0 20px 16px 20px" }}
-        >
+      {/* 입력창 영역 */}
+      <div
+        className="w-full pointer-events-auto px-5"
+        style={{ marginBottom: "16px" }}
+      >
           <div
             className="flex items-center transition-all duration-300 ease-in-out"
             style={{
