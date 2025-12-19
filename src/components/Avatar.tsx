@@ -264,10 +264,25 @@ export default function Avatar() {
     const audio = new Audio(`data:audio/mp3;base64,${currentAudio}`);
     audioRef.current = audio;
 
-    // AudioContext 생성
-    const audioContext = new (window.AudioContext ||
-      (window as any).webkitAudioContext)();
-    audioContextRef.current = audioContext;
+    // AudioContext 생성 (이미 활성화된 컨텍스트가 있으면 재사용)
+    let audioContext: AudioContext;
+    
+    // ChatInterface에서 활성화한 컨텍스트가 있는지 확인
+    // 없으면 새로 생성
+    if (!audioContextRef.current || audioContextRef.current.state === "closed") {
+      audioContext = new (window.AudioContext ||
+        (window as any).webkitAudioContext)();
+      audioContextRef.current = audioContext;
+      
+      // 컨텍스트가 suspended 상태면 활성화 시도
+      if (audioContext.state === "suspended") {
+        audioContext.resume().catch((error) => {
+          console.warn("Avatar: AudioContext 활성화 실패:", error);
+        });
+      }
+    } else {
+      audioContext = audioContextRef.current;
+    }
 
     // AnalyserNode 생성
     const analyser = audioContext.createAnalyser();
@@ -288,7 +303,7 @@ export default function Avatar() {
 
     // 오디오 재생 (사용자 상호작용 후에만 가능)
     console.log("Avatar: 오디오 재생 시작");
-    
+
     // 사용자 상호작용 확인을 위한 함수
     const playAudio = async () => {
       try {
@@ -297,11 +312,14 @@ export default function Avatar() {
         setAudioPlaying(true);
       } catch (error: any) {
         console.error("Avatar: 오디오 재생 오류:", error);
-        
+
         // NotAllowedError인 경우 사용자 상호작용 대기
-        if (error.name === "NotAllowedError" || error.name === "NotSupportedError") {
+        if (
+          error.name === "NotAllowedError" ||
+          error.name === "NotSupportedError"
+        ) {
           console.log("Avatar: 사용자 상호작용 필요, 재시도 대기 중...");
-          
+
           // 사용자 상호작용 이벤트 리스너 추가
           const handleUserInteraction = async () => {
             try {
@@ -312,16 +330,20 @@ export default function Avatar() {
               console.error("Avatar: 재시도 실패:", retryError);
               setAudioPlaying(false);
             }
-            
+
             // 이벤트 리스너 제거
             document.removeEventListener("click", handleUserInteraction);
             document.removeEventListener("touchstart", handleUserInteraction);
           };
-          
+
           // 클릭 또는 터치 이벤트 대기
-          document.addEventListener("click", handleUserInteraction, { once: true });
-          document.addEventListener("touchstart", handleUserInteraction, { once: true });
-          
+          document.addEventListener("click", handleUserInteraction, {
+            once: true,
+          });
+          document.addEventListener("touchstart", handleUserInteraction, {
+            once: true,
+          });
+
           // 5초 후에도 상호작용이 없으면 포기
           setTimeout(() => {
             document.removeEventListener("click", handleUserInteraction);
@@ -334,7 +356,7 @@ export default function Avatar() {
         }
       }
     };
-    
+
     // 즉시 재생 시도
     playAudio();
 

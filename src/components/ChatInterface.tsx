@@ -78,7 +78,10 @@ export default function ChatInterface() {
   const messageDisplayTimerRef = useRef<NodeJS.Timeout | null>(null); // 답변 표시 타이머
   const [showMessage, setShowMessage] = useState(false); // 답변 표시 여부
   const [interimTranscript, setInterimTranscript] = useState(""); // 중간 결과 (말하는 중 표시용)
+  const [showAudioPermissionModal, setShowAudioPermissionModal] = useState(false); // 오디오 자동 재생 허용 모달
+  const [audioContextUnlocked, setAudioContextUnlocked] = useState(false); // 오디오 컨텍스트 활성화 여부
   const permissionDeniedRef = useRef<boolean>(false); // 권한 거부 ref (재시도 방지용)
+  const audioContextRef = useRef<AudioContext | null>(null); // 오디오 컨텍스트 ref
   const {
     messages,
     isLoading,
@@ -750,6 +753,61 @@ export default function ChatInterface() {
             "linear-gradient(to top, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.2) 15%, transparent 20%)",
         }}
       />
+      {/* 오디오 자동 재생 허용 모달 */}
+      {showAudioPermissionModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+          <div
+            className="mx-4 max-w-sm rounded-2xl p-6 shadow-xl"
+            style={{
+              background: "#FFF",
+              backdropFilter: "blur(10px)",
+            }}
+          >
+            <h3
+              className="mb-4 text-lg font-semibold"
+              style={{
+                color: "#1d1d1d",
+                fontFamily: '"Pretendard Variable", Pretendard, sans-serif',
+              }}
+            >
+              오디오 자동 재생 허용
+            </h3>
+            <p
+              className="mb-6 text-sm leading-relaxed"
+              style={{
+                color: "#666",
+                fontFamily: '"Pretendard Variable", Pretendard, sans-serif',
+              }}
+            >
+              캐릭터의 음성을 자동으로 재생하려면 오디오 자동 재생을 허용해주세요.
+              화면을 터치하여 허용해주세요.
+            </p>
+            <div className="flex gap-3">
+              <button
+                onClick={handleDenyAudioAutoplay}
+                className="flex-1 rounded-xl px-4 py-3 text-sm font-medium transition-colors"
+                style={{
+                  background: "#F5F5F5",
+                  color: "#666",
+                  fontFamily: '"Pretendard Variable", Pretendard, sans-serif',
+                }}
+              >
+                나중에
+              </button>
+              <button
+                onClick={handleAllowAudioAutoplay}
+                className="flex-1 rounded-xl px-4 py-3 text-sm font-medium text-white transition-colors"
+                style={{
+                  background: "linear-gradient(180deg, #8569F2 0%, #5A35EC 100%)",
+                  fontFamily: '"Pretendard Variable", Pretendard, sans-serif',
+                }}
+              >
+                허용
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       {/* 권한 거부 토스트 메시지 */}
       {showPermissionToast && (
         <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 pointer-events-none">
