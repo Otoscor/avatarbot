@@ -696,6 +696,62 @@ export default function ChatInterface() {
     isListeningRef.current = isListening;
   }, [isListening]);
 
+  // 오디오 컨텍스트 초기화 및 자동 재생 허용 모달
+  useEffect(() => {
+    // 로컬 스토리지에서 이전 허용 여부 확인
+    const audioPermission = localStorage.getItem("audioAutoplayPermission");
+    
+    if (audioPermission === "granted") {
+      // 이미 허용된 경우 오디오 컨텍스트 활성화
+      unlockAudioContext();
+    } else {
+      // 처음 접속 시 모달 표시
+      const hasSeenModal = sessionStorage.getItem("hasSeenAudioModal");
+      if (!hasSeenModal) {
+        setShowAudioPermissionModal(true);
+        sessionStorage.setItem("hasSeenAudioModal", "true");
+      }
+    }
+  }, []);
+
+  // 오디오 컨텍스트 활성화 함수
+  const unlockAudioContext = useCallback(async () => {
+    try {
+      // AudioContext 생성
+      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      if (!AudioContextClass) {
+        console.warn("AudioContext를 지원하지 않는 브라우저입니다.");
+        return;
+      }
+
+      const context = new AudioContextClass();
+      audioContextRef.current = context;
+
+      // 사용자 상호작용 후 컨텍스트 활성화
+      if (context.state === "suspended") {
+        await context.resume();
+      }
+
+      setAudioContextUnlocked(true);
+      console.log("오디오 컨텍스트 활성화 완료");
+    } catch (error) {
+      console.error("오디오 컨텍스트 활성화 실패:", error);
+    }
+  }, []);
+
+  // 오디오 자동 재생 허용 처리
+  const handleAllowAudioAutoplay = useCallback(async () => {
+    await unlockAudioContext();
+    localStorage.setItem("audioAutoplayPermission", "granted");
+    setShowAudioPermissionModal(false);
+  }, [unlockAudioContext]);
+
+  // 오디오 자동 재생 거부 처리
+  const handleDenyAudioAutoplay = useCallback(() => {
+    localStorage.setItem("audioAutoplayPermission", "denied");
+    setShowAudioPermissionModal(false);
+  }, []);
+
   // 컴포넌트 언마운트 시 타이머 정리
   useEffect(() => {
     return () => {
