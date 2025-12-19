@@ -227,7 +227,7 @@ export default function ChatInterface() {
       }
       // getUserMedia가 없는 경우 (일부 환경) true 반환하여 시도
       return true;
-    } catch (error: any) {
+    } catch (error: unknown) {
       const err = error as DOMException;
       // 권한 거부 또는 마이크 없음
       if (
@@ -240,17 +240,20 @@ export default function ChatInterface() {
         setHasPermissionDenied(true);
         console.warn("마이크 권한이 거부되었거나 마이크를 찾을 수 없습니다:", err.name);
         // 토스트 메시지 표시 (한 번만)
-        if (!showPermissionToast) {
-          setShowPermissionToast(true);
-          setTimeout(() => setShowPermissionToast(false), 5000);
-        }
+        setShowPermissionToast((prev) => {
+          if (!prev) {
+            setTimeout(() => setShowPermissionToast(false), 5000);
+            return true;
+          }
+          return prev;
+        });
         return false;
       }
       // 다른 에러는 로그만 남기고 시도 허용
       console.warn("마이크 권한 확인 중 오류:", err.name);
       return true;
     }
-  }, [showPermissionToast]);
+  }, []);
 
   // 음성 인식 시작 (useCallback으로 메모이제이션)
   const startRecognition = useCallback(async () => {
