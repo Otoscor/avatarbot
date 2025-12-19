@@ -436,7 +436,8 @@ export default function Avatar() {
       audioRef.current &&
       !audioRef.current.paused
     ) {
-      analyserRef.current.getByteFrequencyData(dataArrayRef.current as Uint8Array);
+      // @ts-expect-error - getByteFrequencyData accepts Uint8Array but TypeScript is strict about ArrayBuffer types
+      analyserRef.current.getByteFrequencyData(dataArrayRef.current);
 
       // 평균 볼륨 계산
       let sum = 0;
