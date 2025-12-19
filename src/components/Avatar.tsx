@@ -550,7 +550,9 @@ export default function Avatar() {
       );
       blendShapeWeightsRef.current[expressionName] = newWeight;
       // expressionManager의 setValue 메서드 사용
-      vrm.expressionManager.setValue(expressionName, newWeight);
+      if (vrm.expressionManager) {
+        vrm.expressionManager.setValue(expressionName, newWeight);
+      }
     });
   });
 
