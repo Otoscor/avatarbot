@@ -292,25 +292,32 @@ export default function ChatInterface() {
     }
 
     try {
+      console.log("음성 인식 시작 시도...");
       recognitionRef.current.start();
+      console.log("음성 인식 시작 성공");
       isListeningRef.current = true;
       setIsListening(true);
       setListeningState("listening");
       autoRestartRef.current = false;
     } catch (error) {
       const err = error as Error;
+      console.error("음성 인식 시작 실패:", {
+        name: err.name,
+        message: err.message,
+        error: err,
+      });
       // InvalidStateError는 이미 시작된 경우이므로 무시
       if (
         err.name === "InvalidStateError" ||
         err.message?.includes("already started")
       ) {
+        console.log("이미 시작된 상태로 간주");
         // 이미 시작된 상태로 간주하고 상태만 업데이트
         isListeningRef.current = true;
         setIsListening(true);
         setListeningState("listening");
         return;
       }
-      console.error("음성 인식 시작 실패:", error);
       isListeningRef.current = false;
       setIsListening(false);
     }
@@ -349,6 +356,9 @@ export default function ChatInterface() {
 
     // SpeechRecognition 인스턴스 생성
     const recognition = new SpeechRecognition();
+    
+    // iOS Safari 호환성: continuous 모드가 제대로 작동하지 않을 수 있음
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     recognition.continuous = true; // 연속 인식
     recognition.interimResults = true; // 중간 결과도 받기
     recognition.lang = "ko-KR"; // 한국어 설정
@@ -358,22 +368,31 @@ export default function ChatInterface() {
       interimResults: recognition.interimResults,
       lang: recognition.lang,
       userAgent: navigator.userAgent,
-    });
-
-    console.log("음성 인식 초기화 완료:", {
-      continuous: recognition.continuous,
-      interimResults: recognition.interimResults,
-      lang: recognition.lang,
+      isIOS: isIOS,
     });
 
     // 인식 결과 처리
     recognition.onresult = (event: SpeechRecognitionEvent) => {
+      console.log("음성 인식 결과 받음:", {
+        resultIndex: event.resultIndex,
+        resultsLength: event.results.length,
+      });
+
       let interimTranscript = "";
       let finalTranscript = "";
 
       for (let i = event.resultIndex; i < event.results.length; i++) {
-        const transcript = event.results[i][0].transcript;
-        if (event.results[i].isFinal) {
+        const result = event.results[i];
+        const transcript = result[0].transcript;
+        const isFinal = result.isFinal;
+        
+        console.log(`결과 ${i}:`, {
+          transcript,
+          isFinal,
+          confidence: result[0].confidence,
+        });
+
+        if (isFinal) {
           finalTranscript += transcript + " ";
         } else {
           interimTranscript += transcript;
@@ -382,6 +401,7 @@ export default function ChatInterface() {
 
       // 최종 결과가 있으면 입력창에 추가
       if (finalTranscript) {
+        console.log("최종 결과:", finalTranscript);
         setInputValue((prev) => {
           const newValue = prev + finalTranscript.trim() + " ";
           return newValue;
@@ -392,6 +412,7 @@ export default function ChatInterface() {
 
       // 중간 결과가 있으면 "말하는 중" 상태로 변경
       if (interimTranscript && !finalTranscript) {
+        console.log("중간 결과:", interimTranscript);
         setListeningState("speaking");
         // 침묵 타이머 초기화 (사용자가 말하는 중)
         resetSilenceTimer();
@@ -444,6 +465,14 @@ export default function ChatInterface() {
 
     // 인식 종료 처리
     recognition.onend = () => {
+      console.log("음성 인식 종료됨", {
+        autoRestart: autoRestartRef.current,
+        isAudioPlaying: isAudioPlayingRef.current,
+        isLoading: isLoadingRef.current,
+        isMuted: isMuted,
+        permissionDenied: permissionDeniedRef.current,
+      });
+      
       isListeningRef.current = false;
       setIsListening(false);
 
@@ -462,6 +491,7 @@ export default function ChatInterface() {
         !isMuted && // 음소거 상태가 아닐 때만
         !permissionDeniedRef.current // 권한이 거부되지 않았을 때만
       ) {
+        console.log("음성 인식 자동 재시작 시도...");
         // 약간의 지연 후 재시작 (브라우저 정책 준수)
         setTimeout(() => {
           // 재시작 전에 다시 한 번 상태 확인
@@ -479,6 +509,29 @@ export default function ChatInterface() {
       } else {
         autoRestartRef.current = false;
       }
+    };
+    
+    // iOS Safari에서 시작 이벤트 확인
+    recognition.onstart = () => {
+      console.log("음성 인식 시작됨 (onstart 이벤트)");
+    };
+    
+    // iOS Safari에서 음성 감지 이벤트 확인
+    recognition.onspeechstart = () => {
+      console.log("음성 감지 시작됨 (onspeechstart 이벤트)");
+      setListeningState("speaking");
+    };
+    
+    recognition.onspeechend = () => {
+      console.log("음성 감지 종료됨 (onspeechend 이벤트)");
+    };
+    
+    recognition.onsoundstart = () => {
+      console.log("소리 감지 시작됨 (onsoundstart 이벤트)");
+    };
+    
+    recognition.onsoundend = () => {
+      console.log("소리 감지 종료됨 (onsoundend 이벤트)");
     };
 
     recognitionRef.current = recognition;
