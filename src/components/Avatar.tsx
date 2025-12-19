@@ -1,4 +1,5 @@
 "use client";
+// Avatar component with VRM model support
 
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { VRMLoaderPlugin, VRM } from "@pixiv/three-vrm";
