@@ -436,7 +436,7 @@ export default function Avatar() {
       audioRef.current &&
       !audioRef.current.paused
     ) {
-      analyserRef.current.getByteFrequencyData(dataArrayRef.current);
+      analyserRef.current.getByteFrequencyData(dataArrayRef.current as Uint8Array);
 
       // 평균 볼륨 계산
       let sum = 0;
