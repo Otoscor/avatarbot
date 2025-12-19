@@ -203,13 +203,14 @@ export default function ChatInterface() {
     setAudio,
   ]);
 
-  // 침묵 감지 타이머 초기화
+  // 침묵 감지 타이머 초기화 (텍스트 입력용, 음성 인식은 onresult에서 바로 전송)
   const resetSilenceTimer = useCallback(() => {
     if (silenceTimerRef.current) {
       clearTimeout(silenceTimerRef.current);
     }
+    // 텍스트 입력 시에만 침묵 타이머 사용 (음성 인식은 onresult에서 바로 전송)
     silenceTimerRef.current = setTimeout(() => {
-      // 1.5초 침묵 후 자동 전송
+      // 1.5초 침묵 후 자동 전송 (텍스트 입력 시에만)
       if (inputValue.trim() && !isLoading && !isAudioPlaying) {
         handleSend();
       }
@@ -361,7 +362,7 @@ export default function ChatInterface() {
 
     // SpeechRecognition 인스턴스 생성
     const recognition = new SpeechRecognition();
-    
+
     // iOS Safari 호환성: continuous 모드가 제대로 작동하지 않을 수 있음
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     recognition.continuous = true; // 연속 인식
@@ -404,23 +405,62 @@ export default function ChatInterface() {
         }
       }
 
-      // 최종 결과가 있으면 입력창에 추가
+      // 최종 결과가 있으면 바로 전송 (입력창에 표시하지 않음)
       if (finalTranscript) {
-        console.log("최종 결과:", finalTranscript);
-        setInputValue((prev) => {
-          const newValue = prev + finalTranscript.trim() + " ";
-          return newValue;
-        });
-        // 침묵 타이머 초기화
-        resetSilenceTimer();
+        const messageText = finalTranscript.trim();
+        console.log("최종 결과 - 바로 전송:", messageText);
+        
+        if (messageText) {
+          // 입력창에 표시하지 않고 바로 메시지 전송
+          addMessage({
+            role: "user",
+            content: messageText,
+          });
+          
+          // API 호출
+          setLoading(true);
+          fetch("/api/chat", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              messages: [
+                ...messages,
+                {
+                  role: "user",
+                  content: messageText,
+                },
+              ],
+            }),
+          })
+            .then((res) => res.json())
+            .then((data) => {
+              if (data.text) {
+                addMessage({
+                  role: "assistant",
+                  content: data.text,
+                });
+              }
+              if (data.emotion) {
+                setEmotion(data.emotion);
+              }
+              if (data.audio) {
+                setAudio(data.audio);
+              }
+              setLoading(false);
+            })
+            .catch((error) => {
+              console.error("채팅 오류:", error);
+              setLoading(false);
+            });
+        }
       }
 
       // 중간 결과가 있으면 "말하는 중" 상태로 변경
       if (interimTranscript && !finalTranscript) {
         console.log("중간 결과:", interimTranscript);
         setListeningState("speaking");
-        // 침묵 타이머 초기화 (사용자가 말하는 중)
-        resetSilenceTimer();
       }
     };
 
@@ -477,7 +517,7 @@ export default function ChatInterface() {
         isMuted: isMuted,
         permissionDenied: permissionDeniedRef.current,
       });
-      
+
       isListeningRef.current = false;
       setIsListening(false);
 
@@ -515,26 +555,26 @@ export default function ChatInterface() {
         autoRestartRef.current = false;
       }
     };
-    
+
     // iOS Safari에서 시작 이벤트 확인
     recognition.onstart = () => {
       console.log("음성 인식 시작됨 (onstart 이벤트)");
     };
-    
+
     // iOS Safari에서 음성 감지 이벤트 확인
     recognition.onspeechstart = () => {
       console.log("음성 감지 시작됨 (onspeechstart 이벤트)");
       setListeningState("speaking");
     };
-    
+
     recognition.onspeechend = () => {
       console.log("음성 감지 종료됨 (onspeechend 이벤트)");
     };
-    
+
     recognition.onsoundstart = () => {
       console.log("소리 감지 시작됨 (onsoundstart 이벤트)");
     };
-    
+
     recognition.onsoundend = () => {
       console.log("소리 감지 종료됨 (onsoundend 이벤트)");
     };
