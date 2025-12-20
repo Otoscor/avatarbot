@@ -96,14 +96,29 @@ export default function Avatar() {
     }
   };
 
+  // VRM 모델 로드 (캐릭터 선택에 따라 다른 파일 로드)
   useEffect(() => {
+    // 기존 모델 정리
+    if (gltf && groupRef.current) {
+      groupRef.current.remove(gltf.scene);
+      setGltf(null);
+      setVrm(null);
+    }
+
     // VRMLoaderPlugin을 등록한 로더 생성
     const loader = new GLTFLoader();
     loader.register((parser) => new VRMLoaderPlugin(parser));
 
+    // 선택된 캐릭터에 따라 다른 VRM 파일 로드
+    const vrmPath = selectedCharacter === "jinyoung" 
+      ? "/zanmangloopy.vrm" 
+      : "/test.vrm";
+
+    console.log("VRM 모델 로드 시작:", vrmPath);
+
     // VRM 파일 로드
     loader.load(
-      "/avatar.vrm",
+      vrmPath,
       (loadedGltf) => {
         setGltf(loadedGltf);
         const vrmData = loadedGltf.userData.vrm as VRM;
