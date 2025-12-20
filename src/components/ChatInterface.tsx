@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useChatStore } from "@/store/useChatStore";
-import { ArrowUp, Mic, MicOff } from "lucide-react";
+import { ArrowUp, Mic, MicOff, X, Check } from "lucide-react";
 
 // Web Speech API 타입 정의
 interface SpeechRecognition extends EventTarget {
