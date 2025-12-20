@@ -1085,7 +1085,7 @@ export default function ChatInterface() {
                 >
                   {currentMessage.content}
                 </p>
-              ) : listeningState === "speaking" && (interimTranscript || currentSpeechText) ? (
+              ) : (interimTranscript || currentSpeechText) && isListening ? (
                 <span
                   style={{
                     color: "#FFF",
