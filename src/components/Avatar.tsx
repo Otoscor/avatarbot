@@ -468,116 +468,92 @@ export default function Avatar() {
     // 2. 뼈 움직임 로직 (vrm.update 이후에 실행)
     if (vrm.humanoid) {
       try {
-        // [몸통] 둥실둥실 (위아래 움직임)
-        const hips = vrm.humanoid.getNormalizedBoneNode("hips");
-        if (hips) {
-          // 루피는 키가 작으므로 이동 범위를 0.05로 작게 설정
-          const targetY = Math.sin(time * 1.5) * 0.05;
-          hips.position.y = targetY;
-
-          if (shouldLog) {
-            console.log(
-              "🔄 [HIPS] position.y:",
-              hips.position.y.toFixed(4),
-              "목표:",
-              targetY.toFixed(4)
-            );
-          }
+        // [몸통] 둥실둥실 (위아래 움직임) - Raw Bone 사용
+        const hipsRaw = vrm.humanoid.getRawBoneNode("hips");
+        if (hipsRaw) {
+          const targetY = Math.sin(time * 1.5) * 0.03; // 미세하게
+          hipsRaw.position.y = targetY;
         }
 
-        // [상체] 숨쉬기 (스케일 조절)
-        let chest =
-          vrm.humanoid.getNormalizedBoneNode("chest") ||
-          vrm.humanoid.getNormalizedBoneNode("upperChest") ||
-          vrm.humanoid.getNormalizedBoneNode("spine");
+        // [상체] 숨쉬기 (스케일 조절) - Raw Bone 사용
+        let chestRaw =
+          vrm.humanoid.getRawBoneNode("chest") ||
+          vrm.humanoid.getRawBoneNode("upperChest") ||
+          vrm.humanoid.getRawBoneNode("spine");
 
-        if (chest) {
-          const s = 1.0 + Math.sin(time * 2.0) * 0.05; // 호흡을 약간 빠르게
-          chest.scale.set(s, s, s);
-
-          if (shouldLog) {
-            console.log("🔄 [CHEST] scale:", chest.scale.x.toFixed(4));
-          }
+        if (chestRaw) {
+          const s = 1.0 + Math.sin(time * 1.5) * 0.02; // 미세하게
+          chestRaw.scale.set(s, s, s);
         }
 
-        // [팔] A-pose 적용 - 자연스럽게 팔 내리기
-        const leftUpperArm = vrm.humanoid.getNormalizedBoneNode("leftUpperArm");
-        if (leftUpperArm) {
+        // [팔] A-pose 적용 - getRawBoneNode 사용 (실제 skeleton 조작)
+        const leftUpperArmRaw = vrm.humanoid.getRawBoneNode("leftUpperArm");
+        if (leftUpperArmRaw) {
           // A-pose: 팔을 자연스럽게 아래로
-          // X축: 팔을 앞으로 약간 (자연스러운 자세)
           const targetX = 0.5; // 약 29° 앞으로
-          // Y축: 팔을 몸쪽으로
           const targetY = 0.2; // 약 11° 안쪽으로
-          // Z축: 팔을 아래로
           const targetZ = -0.3; // 약 -17° 아래로
 
           // 부드럽게 이동 (lerp)
-          leftUpperArm.rotation.x = THREE.MathUtils.lerp(
-            leftUpperArm.rotation.x,
+          leftUpperArmRaw.rotation.x = THREE.MathUtils.lerp(
+            leftUpperArmRaw.rotation.x,
             targetX,
             0.1
           );
-          leftUpperArm.rotation.y = THREE.MathUtils.lerp(
-            leftUpperArm.rotation.y,
+          leftUpperArmRaw.rotation.y = THREE.MathUtils.lerp(
+            leftUpperArmRaw.rotation.y,
             targetY,
             0.1
           );
-          leftUpperArm.rotation.z = THREE.MathUtils.lerp(
-            leftUpperArm.rotation.z,
+          leftUpperArmRaw.rotation.z = THREE.MathUtils.lerp(
+            leftUpperArmRaw.rotation.z,
             targetZ,
             0.1
           );
 
-          // ⚡ 강제로 매트릭스 업데이트
-          leftUpperArm.updateMatrix();
-
           if (shouldLog) {
             console.log(
-              "💪 [LEFT ARM] X:",
-              leftUpperArm.rotation.x.toFixed(2),
+              "💪 [LEFT ARM RAW] X:",
+              leftUpperArmRaw.rotation.x.toFixed(2),
               "Y:",
-              leftUpperArm.rotation.y.toFixed(2),
+              leftUpperArmRaw.rotation.y.toFixed(2),
               "Z:",
-              leftUpperArm.rotation.z.toFixed(2)
+              leftUpperArmRaw.rotation.z.toFixed(2)
             );
           }
         }
 
-        const rightUpperArm =
-          vrm.humanoid.getNormalizedBoneNode("rightUpperArm");
-        if (rightUpperArm) {
+        const rightUpperArmRaw = vrm.humanoid.getRawBoneNode("rightUpperArm");
+        if (rightUpperArmRaw) {
           // A-pose: 오른팔도 대칭으로
           const targetX = 0.5; // 약 29° 앞으로
           const targetY = -0.2; // 약 -11° 안쪽으로 (대칭)
           const targetZ = 0.3; // 약 17° 아래로 (대칭)
 
-          rightUpperArm.rotation.x = THREE.MathUtils.lerp(
-            rightUpperArm.rotation.x,
+          rightUpperArmRaw.rotation.x = THREE.MathUtils.lerp(
+            rightUpperArmRaw.rotation.x,
             targetX,
             0.1
           );
-          rightUpperArm.rotation.y = THREE.MathUtils.lerp(
-            rightUpperArm.rotation.y,
+          rightUpperArmRaw.rotation.y = THREE.MathUtils.lerp(
+            rightUpperArmRaw.rotation.y,
             targetY,
             0.1
           );
-          rightUpperArm.rotation.z = THREE.MathUtils.lerp(
-            rightUpperArm.rotation.z,
+          rightUpperArmRaw.rotation.z = THREE.MathUtils.lerp(
+            rightUpperArmRaw.rotation.z,
             targetZ,
             0.1
           );
 
-          // ⚡ 강제로 매트릭스 업데이트
-          rightUpperArm.updateMatrix();
-
           if (shouldLog) {
             console.log(
-              "💪 [RIGHT ARM] X:",
-              rightUpperArm.rotation.x.toFixed(2),
+              "💪 [RIGHT ARM RAW] X:",
+              rightUpperArmRaw.rotation.x.toFixed(2),
               "Y:",
-              rightUpperArm.rotation.y.toFixed(2),
+              rightUpperArmRaw.rotation.y.toFixed(2),
               "Z:",
-              rightUpperArm.rotation.z.toFixed(2)
+              rightUpperArmRaw.rotation.z.toFixed(2)
             );
           }
         }
