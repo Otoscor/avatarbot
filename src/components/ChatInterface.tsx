@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useChatStore } from "@/store/useChatStore";
 import { ArrowUp, Mic, MicOff, X, Check } from "lucide-react";
+import Image from "next/image";
 
 // Web Speech API 타입 정의
 interface SpeechRecognition extends EventTarget {
@@ -1131,12 +1132,25 @@ export default function ChatInterface() {
                     {/* 캐릭터 프리뷰 (테스트) */}
                     <div
                       style={{
-                        width: "80px",
-                        height: "80px",
+                        width: "100%",
+                        height: "100%",
                         background: "#E5E5E5",
                         borderRadius: "8px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
                       }}
-                    />
+                    >
+                      <span
+                        style={{
+                          color: "#999",
+                          fontSize: "12px",
+                          fontFamily: '"Pretendard Variable", Pretendard, sans-serif',
+                        }}
+                      >
+                        테스트
+                      </span>
+                    </div>
                   </div>
                   <div
                     style={{
@@ -1203,27 +1217,22 @@ export default function ChatInterface() {
                         <Check size={14} color="#FFF" />
                       </div>
                     )}
-                    {/* 캐릭터 프리뷰 (진영 루띠 - 크리스마스 테마) */}
+                    {/* 캐릭터 프리뷰 (진영 루띠) */}
                     <div
                       style={{
                         width: "100%",
                         height: "100%",
-                        background: "linear-gradient(135deg, #D4A574 0%, #8B6F47 100%)",
                         borderRadius: "8px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
                         position: "relative",
                         overflow: "hidden",
                       }}
                     >
-                      {/* 크리스마스 테마 데코레이션 표현 */}
-                      <div
+                      <Image
+                        src="/zanmangLoopyThumnbnail.jpg"
+                        alt="진영 루띠"
+                        fill
                         style={{
-                          width: "60px",
-                          height: "60px",
-                          borderRadius: "50%",
-                          background: "#FFB5C5",
+                          objectFit: "cover",
                         }}
                       />
                     </div>
