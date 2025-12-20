@@ -121,15 +121,45 @@ export default function Avatar() {
             // 🔍 본의 초기 rotation 값 출력 (명확하게)
             if (leftUpperArm) {
               console.log("📍 LeftUpperArm 초기 rotation:");
-              console.log(`   X: ${leftUpperArm.rotation.x.toFixed(4)} (${(leftUpperArm.rotation.x * 180 / Math.PI).toFixed(1)}°)`);
-              console.log(`   Y: ${leftUpperArm.rotation.y.toFixed(4)} (${(leftUpperArm.rotation.y * 180 / Math.PI).toFixed(1)}°)`);
-              console.log(`   Z: ${leftUpperArm.rotation.z.toFixed(4)} (${(leftUpperArm.rotation.z * 180 / Math.PI).toFixed(1)}°)`);
+              console.log(
+                `   X: ${leftUpperArm.rotation.x.toFixed(4)} (${(
+                  (leftUpperArm.rotation.x * 180) /
+                  Math.PI
+                ).toFixed(1)}°)`
+              );
+              console.log(
+                `   Y: ${leftUpperArm.rotation.y.toFixed(4)} (${(
+                  (leftUpperArm.rotation.y * 180) /
+                  Math.PI
+                ).toFixed(1)}°)`
+              );
+              console.log(
+                `   Z: ${leftUpperArm.rotation.z.toFixed(4)} (${(
+                  (leftUpperArm.rotation.z * 180) /
+                  Math.PI
+                ).toFixed(1)}°)`
+              );
             }
             if (rightUpperArm) {
               console.log("📍 RightUpperArm 초기 rotation:");
-              console.log(`   X: ${rightUpperArm.rotation.x.toFixed(4)} (${(rightUpperArm.rotation.x * 180 / Math.PI).toFixed(1)}°)`);
-              console.log(`   Y: ${rightUpperArm.rotation.y.toFixed(4)} (${(rightUpperArm.rotation.y * 180 / Math.PI).toFixed(1)}°)`);
-              console.log(`   Z: ${rightUpperArm.rotation.z.toFixed(4)} (${(rightUpperArm.rotation.z * 180 / Math.PI).toFixed(1)}°)`);
+              console.log(
+                `   X: ${rightUpperArm.rotation.x.toFixed(4)} (${(
+                  (rightUpperArm.rotation.x * 180) /
+                  Math.PI
+                ).toFixed(1)}°)`
+              );
+              console.log(
+                `   Y: ${rightUpperArm.rotation.y.toFixed(4)} (${(
+                  (rightUpperArm.rotation.y * 180) /
+                  Math.PI
+                ).toFixed(1)}°)`
+              );
+              console.log(
+                `   Z: ${rightUpperArm.rotation.z.toFixed(4)} (${(
+                  (rightUpperArm.rotation.z * 180) /
+                  Math.PI
+                ).toFixed(1)}°)`
+              );
             }
             if (hips) {
               console.log("📍 Hips 초기 position:");
@@ -466,42 +496,79 @@ export default function Avatar() {
           }
         }
 
-        // [팔] 🧪 극단적인 회전 테스트 - 어떤 축이 팔을 움직이는지 확인!
+        // [팔] A-pose 적용 - 자연스럽게 팔 내리기
         const leftUpperArm = vrm.humanoid.getNormalizedBoneNode("leftUpperArm");
         if (leftUpperArm) {
-          // 🧪 TEST: X, Y, Z 축을 모두 극단적으로 회전시켜서 화면에서 변화 확인
-          // X축: 앞뒤로 크게 흔들기
-          const testX = Math.sin(time * 0.5) * 1.5; // -1.5 ~ +1.5 라디안 (-86° ~ +86°)
-          
-          // Y축: 좌우로 크게 흔들기
-          const testY = Math.sin(time * 0.5 + Math.PI/2) * 1.5;
-          
-          // Z축: 위아래로 크게 흔들기  
-          const testZ = Math.sin(time * 0.5 + Math.PI) * 1.5;
+          // A-pose: 팔을 자연스럽게 아래로
+          // X축: 팔을 앞으로 약간 (자연스러운 자세)
+          const targetX = 0.5; // 약 29° 앞으로
+          // Y축: 팔을 몸쪽으로
+          const targetY = 0.2; // 약 11° 안쪽으로
+          // Z축: 팔을 아래로
+          const targetZ = -0.3; // 약 -17° 아래로
 
-          leftUpperArm.rotation.x = testX;
-          leftUpperArm.rotation.y = testY;
-          leftUpperArm.rotation.z = testZ;
+          // 부드럽게 이동 (lerp)
+          leftUpperArm.rotation.x = THREE.MathUtils.lerp(
+            leftUpperArm.rotation.x,
+            targetX,
+            0.1
+          );
+          leftUpperArm.rotation.y = THREE.MathUtils.lerp(
+            leftUpperArm.rotation.y,
+            targetY,
+            0.1
+          );
+          leftUpperArm.rotation.z = THREE.MathUtils.lerp(
+            leftUpperArm.rotation.z,
+            targetZ,
+            0.1
+          );
 
           if (shouldLog) {
-            console.log("🧪 [LEFT ARM TEST] X:", testX.toFixed(2), "Y:", testY.toFixed(2), "Z:", testZ.toFixed(2));
+            console.log(
+              "💪 [LEFT ARM] X:",
+              leftUpperArm.rotation.x.toFixed(2),
+              "Y:",
+              leftUpperArm.rotation.y.toFixed(2),
+              "Z:",
+              leftUpperArm.rotation.z.toFixed(2)
+            );
           }
         }
 
         const rightUpperArm =
           vrm.humanoid.getNormalizedBoneNode("rightUpperArm");
         if (rightUpperArm) {
-          // 🧪 TEST: 오른팔도 동일하게 극단적으로 테스트
-          const testX = Math.sin(time * 0.5) * 1.5;
-          const testY = Math.sin(time * 0.5 + Math.PI/2) * 1.5;
-          const testZ = Math.sin(time * 0.5 + Math.PI) * 1.5;
+          // A-pose: 오른팔도 대칭으로
+          const targetX = 0.5; // 약 29° 앞으로
+          const targetY = -0.2; // 약 -11° 안쪽으로 (대칭)
+          const targetZ = 0.3; // 약 17° 아래로 (대칭)
 
-          rightUpperArm.rotation.x = testX;
-          rightUpperArm.rotation.y = testY;
-          rightUpperArm.rotation.z = testZ;
+          rightUpperArm.rotation.x = THREE.MathUtils.lerp(
+            rightUpperArm.rotation.x,
+            targetX,
+            0.1
+          );
+          rightUpperArm.rotation.y = THREE.MathUtils.lerp(
+            rightUpperArm.rotation.y,
+            targetY,
+            0.1
+          );
+          rightUpperArm.rotation.z = THREE.MathUtils.lerp(
+            rightUpperArm.rotation.z,
+            targetZ,
+            0.1
+          );
 
           if (shouldLog) {
-            console.log("🧪 [RIGHT ARM TEST] X:", testX.toFixed(2), "Y:", testY.toFixed(2), "Z:", testZ.toFixed(2));
+            console.log(
+              "💪 [RIGHT ARM] X:",
+              rightUpperArm.rotation.x.toFixed(2),
+              "Y:",
+              rightUpperArm.rotation.y.toFixed(2),
+              "Z:",
+              rightUpperArm.rotation.z.toFixed(2)
+            );
           }
         }
       } catch (error) {
