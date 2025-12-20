@@ -408,8 +408,9 @@ export default function Avatar() {
         // 둥실둥실(Position): Hips의 Y축 위치를 위아래로 천천히 둥실거리게
         const hips = vrm.humanoid.getNormalizedBoneNode("hips");
         if (hips) {
-          const floatingAmount = Math.sin(time * 1.2) * 0.15; // 0.08 → 0.15로 대폭 증가
+          const floatingAmount = Math.sin(time * 1.2) * 0.5; // 극단적으로 크게!
           hips.position.y = floatingAmount;
+          console.log("🎈 Hips 위치:", floatingAmount.toFixed(4));
         }
 
         // 숨쉬기(Scale): Chest나 Spine 뼈의 스케일을 미세하게 조정
@@ -425,69 +426,73 @@ export default function Avatar() {
         }
 
         if (chest) {
-          const breathingScale = 1.0 + Math.sin(time * 1.5) * 0.15; // 0.03 → 0.15로 대폭 증가!
+          const breathingScale = 1.0 + Math.sin(time * 1.5) * 0.3; // 극단적으로 크게!
           chest.scale.set(breathingScale, breathingScale, breathingScale);
-          console.log("✅ 숨쉬기 스케일 적용:", breathingScale.toFixed(4));
+          console.log("✅ 숨쉬기 스케일:", breathingScale.toFixed(4));
         }
 
         // 척추 미세 회전 (숨쉬기)
         const spine = vrm.humanoid.getNormalizedBoneNode("spine");
         if (spine) {
-          const breathingRotation = Math.sin(time * 1.5) * 0.08; // 0.02 → 0.08로 대폭 증가
-          const idleSway = Math.sin(time * 0.8) * 0.06; // 0.015 → 0.06로 대폭 증가
+          const breathingRotation = Math.sin(time * 1.5) * 0.2; // 극단적으로 크게!
+          const idleSway = Math.sin(time * 0.8) * 0.15; // 극단적으로 크게!
           spine.rotation.x = breathingRotation;
           spine.rotation.y = idleSway;
           spine.quaternion.setFromEuler(spine.rotation);
+          console.log("🌀 Spine 회전:", breathingRotation.toFixed(4), idleSway.toFixed(4));
         }
 
         // 머리 자연스러운 움직임
         const head = vrm.humanoid.getNormalizedBoneNode("head");
         if (head) {
-          const headSway = Math.sin(time * 0.5) * 0.15; // 0.05 → 0.15로 대폭 증가
-          const headNod = Math.sin(time * 0.7) * 0.08; // 0.02 → 0.08로 대폭 증가
+          const headSway = Math.sin(time * 0.5) * 0.5; // 극단적으로 크게!
+          const headNod = Math.sin(time * 0.7) * 0.3; // 극단적으로 크게!
           head.rotation.y = headSway;
           head.rotation.x = headNod;
           head.quaternion.setFromEuler(head.rotation);
+          console.log("👤 Head 회전:", headSway.toFixed(4), headNod.toFixed(4));
         }
 
         // 팔 내리기(Rotation): 자연스러운 A-pose
         const leftUpperArm = vrm.humanoid.getNormalizedBoneNode("leftUpperArm");
         if (leftUpperArm) {
-          const targetRotation = -0.3; // -1.2 → -0.3으로 조정
-          const breathingSway = Math.sin(time * 1.5) * 0.1; // 0.05 → 0.1로 증가
-          const idleMotion = Math.sin(time * 0.6) * 0.08; // 0.03 → 0.08로 증가
+          const targetRotation = -0.3;
+          const breathingSway = Math.sin(time * 1.5) * 0.3; // 극단적으로 크게!
+          const idleMotion = Math.sin(time * 0.6) * 0.2; // 극단적으로 크게!
 
           leftUpperArm.rotation.x = 0;
           leftUpperArm.rotation.y = 0;
           leftUpperArm.rotation.z = THREE.MathUtils.lerp(
             leftUpperArm.rotation.z,
             targetRotation + breathingSway + idleMotion,
-            0.2 // 0.1 → 0.2로 증가
+            0.3
           );
           leftUpperArm.quaternion.setFromEuler(leftUpperArm.rotation);
+          console.log("💪 왼팔:", leftUpperArm.rotation.z.toFixed(4));
         }
 
         const rightUpperArm =
           vrm.humanoid.getNormalizedBoneNode("rightUpperArm");
         if (rightUpperArm) {
-          const targetRotation = 0.3; // 1.2 → 0.3으로 조정
-          const breathingSway = Math.sin(time * 1.5 + Math.PI) * 0.1; // 0.05 → 0.1로 증가
-          const idleMotion = Math.sin(time * 0.6 + Math.PI) * 0.08; // 0.03 → 0.08로 증가
+          const targetRotation = 0.3;
+          const breathingSway = Math.sin(time * 1.5 + Math.PI) * 0.3; // 극단적으로 크게!
+          const idleMotion = Math.sin(time * 0.6 + Math.PI) * 0.2; // 극단적으로 크게!
 
           rightUpperArm.rotation.x = 0;
           rightUpperArm.rotation.y = 0;
           rightUpperArm.rotation.z = THREE.MathUtils.lerp(
             rightUpperArm.rotation.z,
             targetRotation + breathingSway + idleMotion,
-            0.2 // 0.1 → 0.2로 증가
+            0.3
           );
           rightUpperArm.quaternion.setFromEuler(rightUpperArm.rotation);
+          console.log("💪 오른팔:", rightUpperArm.rotation.z.toFixed(4));
         }
 
         // 팔꿈치 미세한 움직임
         const leftLowerArm = vrm.humanoid.getNormalizedBoneNode("leftLowerArm");
         if (leftLowerArm) {
-          const elbowBend = Math.sin(time * 1.5) * 0.2; // 0.05 → 0.2로 대폭 증가!
+          const elbowBend = Math.sin(time * 1.5) * 0.5; // 극단적으로 크게!
           leftLowerArm.rotation.x = 0;
           leftLowerArm.rotation.y = 0;
           leftLowerArm.rotation.z = elbowBend;
@@ -497,7 +502,7 @@ export default function Avatar() {
         const rightLowerArm =
           vrm.humanoid.getNormalizedBoneNode("rightLowerArm");
         if (rightLowerArm) {
-          const elbowBend = Math.sin(time * 1.5 + Math.PI) * 0.2; // 0.05 → 0.2로 대폭 증가!
+          const elbowBend = Math.sin(time * 1.5 + Math.PI) * 0.5; // 극단적으로 크게!
           rightLowerArm.rotation.x = 0;
           rightLowerArm.rotation.y = 0;
           rightLowerArm.rotation.z = -elbowBend;
