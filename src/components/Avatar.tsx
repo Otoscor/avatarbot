@@ -459,17 +459,40 @@ export default function Avatar() {
     const time = state.clock.elapsedTime;
     const lerpSpeed = 3.0;
 
-    // 1. 뼈 애니메이션: vrm.scene 직접 순회 (VRM 업데이트 전에!)
+    // 1. 뼈 애니메이션: vrm.scene 직접 순회 + 모든 본 이름 출력
     let leftArmFound = false;
     let rightArmFound = false;
     let hipsFound = false;
     let spineFound = false;
 
     if (vrm.scene) {
+      // 🔍 5초마다 모든 본 이름 출력 (진단용)
+      if (Math.floor(time) % 5 === 0 && time - Math.floor(time) < delta) {
+        console.log("=== 🦴 모든 본 이름 목록 ===");
+        vrm.scene.traverse((obj: any) => {
+          if (obj.type === "Bone" || obj.isBone) {
+            console.log(`- ${obj.name}`);
+          }
+        });
+      }
+
       vrm.scene.traverse((object: any) => {
         if (!object.name) return;
 
-        // 왼팔 내리기 + 몸통에 붙이기
+        // 왼쪽 어깨뼈(Shoulder/Clavicle) 조작 (팔 전체를 움직임)
+        if (
+          (object.name.toLowerCase().includes("leftshoulder") ||
+            object.name.toLowerCase().includes("left_shoulder") ||
+            object.name.toLowerCase().includes("leftclavicle") ||
+            object.name === "leftShoulder") &&
+          !object.name.includes("Normalized")
+        ) {
+          object.rotation.z = -0.3; // 어깨를 아래로
+          object.matrixAutoUpdate = false;
+          object.updateMatrixWorld(true);
+        }
+
+        // 왼팔 내리기 + Quaternion 사용
         if (
           (object.name.toLowerCase().includes("leftupperarm") ||
             object.name.toLowerCase().includes("left_upperarm") ||
@@ -477,25 +500,34 @@ export default function Avatar() {
           !object.name.includes("Normalized")
         ) {
           leftArmFound = true;
-          const beforeZ = object.rotation.z;
-          object.rotation.x = 0.5; // 앞으로 약간
-          object.rotation.y = 0.3; // 몸통에 붙이기 (안쪽으로)
-          object.rotation.z = -1.5; // 아래로
-
-          // 강제로 매트릭스 업데이트
+          
+          // Quaternion 직접 설정 (rotation 대신)
+          const euler = new THREE.Euler(0.5, 0.3, -1.5, 'XYZ');
+          object.quaternion.setFromEuler(euler);
+          
+          // 자동 업데이트 끄고 강제 업데이트
+          object.matrixAutoUpdate = false;
           object.updateMatrixWorld(true);
 
-          // 2초마다 로그
           if (Math.floor(time) % 2 === 0 && time - Math.floor(time) < delta) {
-            console.log(
-              `🔧 LEFT ARM: ${object.name} | Z: ${beforeZ.toFixed(
-                3
-              )} → ${object.rotation.z.toFixed(3)}`
-            );
+            console.log(`✅ LEFT ARM 설정: ${object.name}`);
           }
         }
 
-        // 오른팔 내리기 + 몸통에 붙이기
+        // 오른쪽 어깨뼈(Shoulder/Clavicle) 조작
+        if (
+          (object.name.toLowerCase().includes("rightshoulder") ||
+            object.name.toLowerCase().includes("right_shoulder") ||
+            object.name.toLowerCase().includes("rightclavicle") ||
+            object.name === "rightShoulder") &&
+          !object.name.includes("Normalized")
+        ) {
+          object.rotation.z = 0.3; // 어깨를 아래로
+          object.matrixAutoUpdate = false;
+          object.updateMatrixWorld(true);
+        }
+
+        // 오른팔 내리기 + Quaternion 사용
         if (
           (object.name.toLowerCase().includes("rightupperarm") ||
             object.name.toLowerCase().includes("right_upperarm") ||
@@ -503,20 +535,17 @@ export default function Avatar() {
           !object.name.includes("Normalized")
         ) {
           rightArmFound = true;
-          const beforeZ = object.rotation.z;
-          object.rotation.x = 0.5; // 앞으로 약간
-          object.rotation.y = -0.3; // 몸통에 붙이기 (안쪽으로)
-          object.rotation.z = 1.5; // 아래로
-
-          // 강제로 매트릭스 업데이트
+          
+          // Quaternion 직접 설정 (rotation 대신)
+          const euler = new THREE.Euler(0.5, -0.3, 1.5, 'XYZ');
+          object.quaternion.setFromEuler(euler);
+          
+          // 자동 업데이트 끄고 강제 업데이트
+          object.matrixAutoUpdate = false;
           object.updateMatrixWorld(true);
 
           if (Math.floor(time) % 2 === 0 && time - Math.floor(time) < delta) {
-            console.log(
-              `🔧 RIGHT ARM: ${object.name} | Z: ${beforeZ.toFixed(
-                3
-              )} → ${object.rotation.z.toFixed(3)}`
-            );
+            console.log(`✅ RIGHT ARM 설정: ${object.name}`);
           }
         }
 
