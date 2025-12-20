@@ -50,42 +50,42 @@ export default function Avatar() {
     if (!vrm.humanoid) return;
 
     try {
-      // 왼쪽 어깨 - z축 회전으로 팔을 아래로 내림 (부호 반대)
+      // 왼쪽 어깨 - z축 회전으로 팔을 자연스럽게 내림
       const leftUpperArm = vrm.humanoid.getNormalizedBoneNode("leftUpperArm");
       if (leftUpperArm) {
         leftUpperArm.rotation.x = 0;
         leftUpperArm.rotation.y = 0;
-        leftUpperArm.rotation.z = 1.2; // z축 회전 1.2 (부호 반대)
+        leftUpperArm.rotation.z = 0.3; // 더 자연스러운 각도
         leftUpperArm.quaternion.setFromEuler(leftUpperArm.rotation);
         console.log("왼쪽 어깨 A-pose 설정됨", leftUpperArm.rotation);
       }
 
-      // 오른쪽 어깨 - z축 회전으로 팔을 아래로 내림 (부호 반대)
+      // 오른쪽 어깨 - z축 회전으로 팔을 자연스럽게 내림
       const rightUpperArm = vrm.humanoid.getNormalizedBoneNode("rightUpperArm");
       if (rightUpperArm) {
         rightUpperArm.rotation.x = 0;
         rightUpperArm.rotation.y = 0;
-        rightUpperArm.rotation.z = -1.2; // z축 회전 -1.2 (부호 반대)
+        rightUpperArm.rotation.z = -0.3; // 더 자연스러운 각도
         rightUpperArm.quaternion.setFromEuler(rightUpperArm.rotation);
         console.log("오른쪽 어깨 A-pose 설정됨", rightUpperArm.rotation);
       }
 
-      // 왼쪽 팔꿈치 - z축 회전 초기화
+      // 왼쪽 팔꿈치 - 초기화
       const leftLowerArm = vrm.humanoid.getNormalizedBoneNode("leftLowerArm");
       if (leftLowerArm) {
         leftLowerArm.rotation.x = 0;
         leftLowerArm.rotation.y = 0;
-        leftLowerArm.rotation.z = 0.0; // z축 회전 0.0
+        leftLowerArm.rotation.z = 0.0;
         leftLowerArm.quaternion.setFromEuler(leftLowerArm.rotation);
         console.log("왼쪽 팔꿈치 초기화됨", leftLowerArm.rotation);
       }
 
-      // 오른쪽 팔꿈치 - z축 회전 초기화
+      // 오른쪽 팔꿈치 - 초기화
       const rightLowerArm = vrm.humanoid.getNormalizedBoneNode("rightLowerArm");
       if (rightLowerArm) {
         rightLowerArm.rotation.x = 0;
         rightLowerArm.rotation.y = 0;
-        rightLowerArm.rotation.z = 0.0; // z축 회전 0.0
+        rightLowerArm.rotation.z = 0.0;
         rightLowerArm.quaternion.setFromEuler(rightLowerArm.rotation);
         console.log("오른쪽 팔꿈치 초기화됨", rightLowerArm.rotation);
       }
@@ -104,6 +104,9 @@ export default function Avatar() {
       setGltf(null);
       setVrm(null);
     }
+    
+    // 포즈 초기화 플래그 리셋 (새 모델 로드 시)
+    poseInitializedRef.current = false;
 
     // VRMLoaderPlugin을 등록한 로더 생성
     const loader = new GLTFLoader();
@@ -189,10 +192,12 @@ export default function Avatar() {
 
   // VRM 모델이 로드된 직후 A-pose 설정
   useEffect(() => {
-    if (vrm && vrm.humanoid) {
+    if (vrm && vrm.humanoid && !poseInitializedRef.current) {
       // 모델이 완전히 로드된 후 포즈 설정
+      console.log("A-pose 초기 설정 시작");
       setAPose(vrm);
       poseInitializedRef.current = true;
+      console.log("A-pose 초기 설정 완료");
     }
   }, [vrm]);
 
@@ -443,13 +448,23 @@ export default function Avatar() {
     // VRM 업데이트
     vrm.update(delta);
 
-    // A-pose 강제 적용 (매 프레임마다 실행하여 리셋 방지)
-    if (vrm.humanoid) {
+    // A-pose 강제 적용 및 자연스러운 애니메이션 (매 프레임마다 실행)
+    if (vrm.humanoid && poseInitializedRef.current) {
       try {
         const time = state.clock.elapsedTime;
 
         // 숨쉬기 모션 (Idle Breathing)
         const breathingAmount = Math.sin(time * 1.5) * 0.02; // 느린 호흡 (1.5Hz)
+        const breathingSpeed = Math.sin(time * 1.5) * 0.03; // 호흡 속도 변화
+
+        // 척추/허리 미세 회전 (숨쉬기 + 자연스러운 흔들림)
+        const spine = vrm.humanoid.getNormalizedBoneNode("spine");
+        if (spine) {
+          const idleSway = Math.sin(time * 0.8) * 0.015; // 느린 좌우 흔들림
+          spine.rotation.x = breathingAmount * 0.3;
+          spine.rotation.y = idleSway;
+          spine.quaternion.setFromEuler(spine.rotation);
+        }
 
         // 상체 미세 회전 (숨쉬기)
         const chest =
@@ -457,39 +472,62 @@ export default function Avatar() {
           vrm.humanoid.getNormalizedBoneNode("upperChest");
         if (chest) {
           chest.rotation.x = breathingAmount * 0.5; // 앞뒤로 미세하게 회전
+          chest.rotation.z = Math.sin(time * 0.6) * 0.01; // 아주 미세한 좌우 기울임
           chest.quaternion.setFromEuler(chest.rotation);
+        }
+
+        // 머리 자연스러운 움직임
+        const head = vrm.humanoid.getNormalizedBoneNode("head");
+        if (head) {
+          const headSway = Math.sin(time * 0.5) * 0.05; // 매우 느린 좌우 움직임
+          const headNod = Math.sin(time * 0.7) * 0.02; // 미세한 끄덕임
+          head.rotation.y = headSway;
+          head.rotation.x = headNod;
+          head.quaternion.setFromEuler(head.rotation);
         }
 
         // 왼쪽 어깨 - z축 회전으로 팔을 아래로 내림 + 숨쉬기 모션
         const leftArm = vrm.humanoid.getNormalizedBoneNode("leftUpperArm");
         if (leftArm) {
-          const baseRotation = 1.2;
-          const breathingSway = Math.sin(time * 1.5) * 0.05; // 숨쉬기로 팔이 살짝 벌어짐
-          leftArm.rotation.z = baseRotation + breathingSway;
+          const baseRotation = 0.3; // A-pose 기본 각도 (더 자연스럽게 조정)
+          const breathingSway = Math.sin(time * 1.5) * 0.03; // 숨쉬기로 팔이 살짝 벌어짐
+          const idleMotion = Math.sin(time * 0.6) * 0.02; // 자연스러운 움직임
+          leftArm.rotation.x = 0;
+          leftArm.rotation.y = 0;
+          leftArm.rotation.z = baseRotation + breathingSway + idleMotion;
           leftArm.quaternion.setFromEuler(leftArm.rotation);
         }
 
         // 오른쪽 어깨 - z축 회전으로 팔을 아래로 내림 + 숨쉬기 모션
         const rightArm = vrm.humanoid.getNormalizedBoneNode("rightUpperArm");
         if (rightArm) {
-          const baseRotation = -1.2;
-          const breathingSway = Math.sin(time * 1.5 + Math.PI) * 0.05; // 반대 위상
-          rightArm.rotation.z = baseRotation + breathingSway;
+          const baseRotation = -0.3; // A-pose 기본 각도 (더 자연스럽게 조정)
+          const breathingSway = Math.sin(time * 1.5 + Math.PI) * 0.03; // 반대 위상
+          const idleMotion = Math.sin(time * 0.6 + Math.PI) * 0.02; // 자연스러운 움직임
+          rightArm.rotation.x = 0;
+          rightArm.rotation.y = 0;
+          rightArm.rotation.z = baseRotation + breathingSway + idleMotion;
           rightArm.quaternion.setFromEuler(rightArm.rotation);
         }
 
-        // 왼쪽 팔꿈치 초기화
+        // 왼쪽 팔꿈치 - 미세한 구부림
         const leftLowerArm = vrm.humanoid.getNormalizedBoneNode("leftLowerArm");
         if (leftLowerArm) {
-          leftLowerArm.rotation.z = 0.0;
+          const elbowBend = Math.sin(time * 1.5) * 0.05; // 숨쉬기에 따른 미세한 구부림
+          leftLowerArm.rotation.x = 0;
+          leftLowerArm.rotation.y = 0;
+          leftLowerArm.rotation.z = elbowBend;
           leftLowerArm.quaternion.setFromEuler(leftLowerArm.rotation);
         }
 
-        // 오른쪽 팔꿈치 초기화
+        // 오른쪽 팔꿈치 - 미세한 구부림
         const rightLowerArm =
           vrm.humanoid.getNormalizedBoneNode("rightLowerArm");
         if (rightLowerArm) {
-          rightLowerArm.rotation.z = 0.0;
+          const elbowBend = Math.sin(time * 1.5 + Math.PI) * 0.05; // 반대 위상
+          rightLowerArm.rotation.x = 0;
+          rightLowerArm.rotation.y = 0;
+          rightLowerArm.rotation.z = -elbowBend;
           rightLowerArm.quaternion.setFromEuler(rightLowerArm.rotation);
         }
       } catch (error) {
