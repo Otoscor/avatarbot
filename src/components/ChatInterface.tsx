@@ -1138,7 +1138,7 @@ export default function ChatInterface() {
                           zIndex: 10,
                         }}
                       >
-                        <Check size={14} color="#FFF" />
+                        <Check size={20} color="#FFF" />
                       </div>
                     )}
                     {/* 캐릭터 프리뷰 (테스트) */}
@@ -1218,7 +1218,7 @@ export default function ChatInterface() {
                           zIndex: 10,
                         }}
                       >
-                        <Check size={14} color="#FFF" />
+                        <Check size={20} color="#FFF" />
                       </div>
                     )}
                     {/* 캐릭터 프리뷰 (잔망 루피) */}
