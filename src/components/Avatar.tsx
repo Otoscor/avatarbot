@@ -404,7 +404,7 @@ export default function Avatar() {
     if (vrm.humanoid) {
       try {
         // ===== 4단계: 방어 코드 (뼈가 null일 경우 대비) =====
-        
+
         // 둥실둥실(Position): Hips의 Y축 위치를 위아래로 천천히 둥실거리게
         const hips = vrm.humanoid.getNormalizedBoneNode("hips");
         if (hips) {
@@ -435,66 +435,55 @@ export default function Avatar() {
         // 척추 미세 회전 (숨쉬기)
         const spine = vrm.humanoid.getNormalizedBoneNode("spine");
         if (spine) {
-          const breathingRotation = Math.sin(time * 1.5) * 0.02;
-          const idleSway = Math.sin(time * 0.8) * 0.015;
+          const breathingRotation = Math.sin(time * 1.5) * 0.08; // 0.02 → 0.08로 대폭 증가
+          const idleSway = Math.sin(time * 0.8) * 0.06; // 0.015 → 0.06로 대폭 증가
           spine.rotation.x = breathingRotation;
           spine.rotation.y = idleSway;
           spine.quaternion.setFromEuler(spine.rotation);
-          console.log("✅ Spine 회전 적용");
         }
 
         // 머리 자연스러운 움직임
         const head = vrm.humanoid.getNormalizedBoneNode("head");
         if (head) {
-          const headSway = Math.sin(time * 0.5) * 0.05;
-          const headNod = Math.sin(time * 0.7) * 0.02;
+          const headSway = Math.sin(time * 0.5) * 0.15; // 0.05 → 0.15로 대폭 증가
+          const headNod = Math.sin(time * 0.7) * 0.08; // 0.02 → 0.08로 대폭 증가
           head.rotation.y = headSway;
           head.rotation.x = headNod;
           head.quaternion.setFromEuler(head.rotation);
-          console.log("✅ Head 회전 적용");
         }
 
-        // 팔 내리기(Rotation): leftUpperArm은 Z축 -1.2, rightUpperArm은 Z축 +1.2로 강제 고정
+        // 팔 내리기(Rotation): 자연스러운 A-pose
         const leftUpperArm = vrm.humanoid.getNormalizedBoneNode("leftUpperArm");
         if (leftUpperArm) {
-          const targetRotation = -1.2; // Z축 -1.2
-          const breathingSway = Math.sin(time * 1.5) * 0.05;
-          const idleMotion = Math.sin(time * 0.6) * 0.03;
+          const targetRotation = -0.3; // -1.2 → -0.3으로 조정
+          const breathingSway = Math.sin(time * 1.5) * 0.1; // 0.05 → 0.1로 증가
+          const idleMotion = Math.sin(time * 0.6) * 0.08; // 0.03 → 0.08로 증가
 
           leftUpperArm.rotation.x = 0;
           leftUpperArm.rotation.y = 0;
           leftUpperArm.rotation.z = THREE.MathUtils.lerp(
             leftUpperArm.rotation.z,
             targetRotation + breathingSway + idleMotion,
-            0.1
+            0.2 // 0.1 → 0.2로 증가
           );
           leftUpperArm.quaternion.setFromEuler(leftUpperArm.rotation);
-          console.log("✅ 왼팔 회전 적용:", leftUpperArm.rotation.z.toFixed(4));
-        } else {
-          console.warn("⚠️ LeftUpperArm 뼈를 찾을 수 없음");
         }
 
         const rightUpperArm =
           vrm.humanoid.getNormalizedBoneNode("rightUpperArm");
         if (rightUpperArm) {
-          const targetRotation = 1.2; // Z축 +1.2
-          const breathingSway = Math.sin(time * 1.5 + Math.PI) * 0.05;
-          const idleMotion = Math.sin(time * 0.6 + Math.PI) * 0.03;
+          const targetRotation = 0.3; // 1.2 → 0.3으로 조정
+          const breathingSway = Math.sin(time * 1.5 + Math.PI) * 0.1; // 0.05 → 0.1로 증가
+          const idleMotion = Math.sin(time * 0.6 + Math.PI) * 0.08; // 0.03 → 0.08로 증가
 
           rightUpperArm.rotation.x = 0;
           rightUpperArm.rotation.y = 0;
           rightUpperArm.rotation.z = THREE.MathUtils.lerp(
             rightUpperArm.rotation.z,
             targetRotation + breathingSway + idleMotion,
-            0.1
+            0.2 // 0.1 → 0.2로 증가
           );
           rightUpperArm.quaternion.setFromEuler(rightUpperArm.rotation);
-          console.log(
-            "✅ 오른팔 회전 적용:",
-            rightUpperArm.rotation.z.toFixed(4)
-          );
-        } else {
-          console.warn("⚠️ RightUpperArm 뼈를 찾을 수 없음");
         }
 
         // 팔꿈치 미세한 움직임
