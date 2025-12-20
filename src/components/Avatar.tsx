@@ -237,7 +237,7 @@ export default function Avatar() {
 
       // 🔍 1단계: Skeleton 시각화 및 본 이름 전체 출력
       console.log("=== 🦴 SKELETON 진단 시작 ===");
-      
+
       // 모든 Object3D 순회하면서 본 찾기
       const bones: any[] = [];
       gltf.scene.traverse((object: any) => {
@@ -254,7 +254,9 @@ export default function Avatar() {
         const skeletonHelper = new THREE.SkeletonHelper(gltf.scene);
         skeletonHelper.visible = true;
         groupRef.current.add(skeletonHelper);
-        console.log("✅ SkeletonHelper 추가됨 (뼈대가 빨간 선으로 보일 겁니다)");
+        console.log(
+          "✅ SkeletonHelper 추가됨 (뼈대가 빨간 선으로 보일 겁니다)"
+        );
       } else {
         console.warn("⚠️ 본이 하나도 없습니다!");
       }
@@ -482,10 +484,7 @@ export default function Avatar() {
     const time = state.clock.elapsedTime;
     const lerpSpeed = 3.0;
 
-    // 1. VRM 업데이트 (필수!)
-    vrm.update(delta);
-
-    // 2. 뼈 애니메이션: vrm.scene 직접 순회 (강화된 디버깅)
+    // 1. 뼈 애니메이션: vrm.scene 직접 순회 (VRM 업데이트 전에!)
     let leftArmFound = false;
     let rightArmFound = false;
     let hipsFound = false;
@@ -495,55 +494,75 @@ export default function Avatar() {
       vrm.scene.traverse((object: any) => {
         if (!object.name) return;
 
-        // 왼팔 내리기 (A-pose)
-        if (object.name.toLowerCase().includes("leftupperarm") || 
-            object.name.toLowerCase().includes("left_upperarm") ||
-            object.name === "leftUpperArm") {
+        // 왼팔 내리기 (A-pose) - 극단적으로!
+        if (
+          object.name.toLowerCase().includes("leftupperarm") ||
+          object.name.toLowerCase().includes("left_upperarm") ||
+          object.name === "leftUpperArm"
+        ) {
           leftArmFound = true;
           const beforeZ = object.rotation.z;
           object.rotation.x = 0.5;
-          object.rotation.y = 0.2;
-          object.rotation.z = -0.3;
-          
+          object.rotation.y = 0;
+          object.rotation.z = -1.5; // 확실하게 아래로!
+
           // 2초마다 로그
           if (Math.floor(time) % 2 === 0 && time - Math.floor(time) < delta) {
-            console.log(`🔧 LEFT ARM: ${object.name} | Z: ${beforeZ.toFixed(3)} → ${object.rotation.z.toFixed(3)}`);
+            console.log(
+              `🔧 LEFT ARM: ${object.name} | Z: ${beforeZ.toFixed(
+                3
+              )} → ${object.rotation.z.toFixed(3)}`
+            );
           }
         }
 
-        // 오른팔 내리기 (A-pose)
-        if (object.name.toLowerCase().includes("rightupperarm") || 
-            object.name.toLowerCase().includes("right_upperarm") ||
-            object.name === "rightUpperArm") {
+        // 오른팔 내리기 (A-pose) - 극단적으로!
+        if (
+          object.name.toLowerCase().includes("rightupperarm") ||
+          object.name.toLowerCase().includes("right_upperarm") ||
+          object.name === "rightUpperArm"
+        ) {
           rightArmFound = true;
           const beforeZ = object.rotation.z;
           object.rotation.x = 0.5;
-          object.rotation.y = -0.2;
-          object.rotation.z = 0.3;
-          
+          object.rotation.y = 0;
+          object.rotation.z = 1.5; // 확실하게 아래로!
+
           if (Math.floor(time) % 2 === 0 && time - Math.floor(time) < delta) {
-            console.log(`🔧 RIGHT ARM: ${object.name} | Z: ${beforeZ.toFixed(3)} → ${object.rotation.z.toFixed(3)}`);
+            console.log(
+              `🔧 RIGHT ARM: ${object.name} | Z: ${beforeZ.toFixed(
+                3
+              )} → ${object.rotation.z.toFixed(3)}`
+            );
           }
         }
 
         // 몸통 둥실거림
-        if (object.name.toLowerCase().includes("hips") || object.name === "hips") {
+        if (
+          object.name.toLowerCase().includes("hips") ||
+          object.name === "hips"
+        ) {
           hipsFound = true;
           object.position.y = Math.sin(time * 1.2) * 0.03;
         }
 
-        // 숨쉬기
-        if (object.name.toLowerCase().includes("spine") || object.name === "spine") {
+        // 숨쉬기 (범위 축소)
+        if (
+          object.name.toLowerCase().includes("spine") ||
+          object.name === "spine"
+        ) {
           spineFound = true;
-          const s = 1.0 + Math.sin(time * 1.5) * 0.02;
+          const s = 1.0 + Math.sin(time * 1.5) * 0.01; // 0.02 → 0.01로 축소
           object.scale.set(s, s, s);
         }
       });
 
       // 본을 못 찾았으면 경고
       if (Math.floor(time) % 3 === 0 && time - Math.floor(time) < delta) {
-        if (!leftArmFound) console.warn("⚠️ leftUpperArm 본을 찾을 수 없습니다!");
-        if (!rightArmFound) console.warn("⚠️ rightUpperArm 본을 찾을 수 없습니다!");
+        if (!leftArmFound)
+          console.warn("⚠️ leftUpperArm 본을 찾을 수 없습니다!");
+        if (!rightArmFound)
+          console.warn("⚠️ rightUpperArm 본을 찾을 수 없습니다!");
         if (!hipsFound) console.warn("⚠️ hips 본을 찾을 수 없습니다!");
         if (!spineFound) console.warn("⚠️ spine 본을 찾을 수 없습니다!");
       }
@@ -633,6 +652,10 @@ export default function Avatar() {
       targetLookAtRef.current.lerp(mousePositionRef.current, 0.1);
       (vrm.lookAt as any).lookAtTarget = targetLookAtRef.current;
     }
+
+    // 2. VRM 업데이트 (맨 마지막에!)
+    // 이렇게 해야 위에서 설정한 본 rotation이 덮어써지지 않습니다
+    vrm.update(delta);
   });
 
   return (
