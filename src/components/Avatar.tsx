@@ -447,51 +447,14 @@ export default function Avatar() {
     };
   }, [currentAudio, vrm, setAudioPlaying]);
 
-  // ===== 🔥 완전히 새로운 접근: GLTF Scene 직접 조작 =====
+  // ===== useFrame: 애니메이션 루프 =====
   useFrame((state, delta) => {
-    if (!vrm || !vrm.expressionManager || !gltf || !vrmInitializedRef.current) {
+    if (!vrm || !vrm.expressionManager || !vrmInitializedRef.current) {
       return;
     }
 
     const time = state.clock.elapsedTime;
-
-    // 1. 먼저 VRM 업데이트 (표정, 립싱크 등)
-    vrm.update(delta);
-
-    // 2. GLTF Scene을 직접 순회해서 본 찾기 및 조작
-    if (gltf.scene) {
-      gltf.scene.traverse((object) => {
-        if (!object.name) return;
-
-        // 왼팔 - A-pose로 내리기
-        if (object.name === "leftUpperArm") {
-          // 극단적인 회전으로 확실하게 변화 확인
-          object.rotation.x = 0.5;
-          object.rotation.y = 0;
-          object.rotation.z = -1.5; // 확실하게 아래로!
-          console.log("✅ LEFT ARM 조작:", object.rotation.z);
-        }
-
-        // 오른팔 - A-pose로 내리기  
-        if (object.name === "rightUpperArm") {
-          object.rotation.x = 0.5;
-          object.rotation.y = 0;
-          object.rotation.z = 1.5; // 확실하게 아래로!
-          console.log("✅ RIGHT ARM 조작:", object.rotation.z);
-        }
-
-        // 몸통 - 둥실둥실
-        if (object.name === "hips") {
-          object.position.y = Math.sin(time * 1.2) * 0.1;
-        }
-
-        // 상체 - 숨쉬기
-        if (object.name === "spine") {
-          const scale = 1.0 + Math.sin(time * 1.5) * 0.05;
-          object.scale.set(scale, scale, scale);
-        }
-      });
-    }
+    const lerpSpeed = 3.0;
 
     // 3. 표정(BlendShape) 및 립싱크 로직
     // 오디오 볼륨 계산
