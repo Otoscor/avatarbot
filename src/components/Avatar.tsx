@@ -479,7 +479,7 @@ export default function Avatar() {
       vrm.scene.traverse((object: any) => {
         if (!object.name) return;
 
-        // 왼쪽 어깨뼈(Shoulder/Clavicle) 조작 (팔 전체를 움직임)
+        // 왼쪽 어깨뼈(Shoulder/Clavicle) 조작
         if (
           (object.name.toLowerCase().includes("leftshoulder") ||
             object.name.toLowerCase().includes("left_shoulder") ||
@@ -487,9 +487,9 @@ export default function Avatar() {
             object.name === "leftShoulder") &&
           !object.name.includes("Normalized")
         ) {
-          object.rotation.z = -0.3; // 어깨를 아래로
-          object.matrixAutoUpdate = false;
-          object.updateMatrixWorld(true);
+          object.rotation.z = -0.3;
+          if (object.parent) object.parent.updateWorldMatrix(true, false);
+          object.updateWorldMatrix(true, true);
         }
 
         // 왼팔 내리기 + Quaternion 사용
@@ -500,14 +500,16 @@ export default function Avatar() {
           !object.name.includes("Normalized")
         ) {
           leftArmFound = true;
-          
-          // Quaternion 직접 설정 (rotation 대신)
-          const euler = new THREE.Euler(0.5, 0.3, -1.5, 'XYZ');
+
+          // Quaternion 직접 설정
+          const euler = new THREE.Euler(0.5, 0.3, -1.5, "XYZ");
           object.quaternion.setFromEuler(euler);
           
-          // 자동 업데이트 끄고 강제 업데이트
-          object.matrixAutoUpdate = false;
-          object.updateMatrixWorld(true);
+          // Parent hierarchy 전체 강제 업데이트
+          if (object.parent) {
+            object.parent.updateWorldMatrix(true, false);
+          }
+          object.updateWorldMatrix(true, true);
 
           if (Math.floor(time) % 2 === 0 && time - Math.floor(time) < delta) {
             console.log(`✅ LEFT ARM 설정: ${object.name}`);
@@ -522,9 +524,9 @@ export default function Avatar() {
             object.name === "rightShoulder") &&
           !object.name.includes("Normalized")
         ) {
-          object.rotation.z = 0.3; // 어깨를 아래로
-          object.matrixAutoUpdate = false;
-          object.updateMatrixWorld(true);
+          object.rotation.z = 0.3;
+          if (object.parent) object.parent.updateWorldMatrix(true, false);
+          object.updateWorldMatrix(true, true);
         }
 
         // 오른팔 내리기 + Quaternion 사용
@@ -535,14 +537,16 @@ export default function Avatar() {
           !object.name.includes("Normalized")
         ) {
           rightArmFound = true;
-          
-          // Quaternion 직접 설정 (rotation 대신)
-          const euler = new THREE.Euler(0.5, -0.3, 1.5, 'XYZ');
+
+          // Quaternion 직접 설정
+          const euler = new THREE.Euler(0.5, -0.3, 1.5, "XYZ");
           object.quaternion.setFromEuler(euler);
           
-          // 자동 업데이트 끄고 강제 업데이트
-          object.matrixAutoUpdate = false;
-          object.updateMatrixWorld(true);
+          // Parent hierarchy 전체 강제 업데이트
+          if (object.parent) {
+            object.parent.updateWorldMatrix(true, false);
+          }
+          object.updateWorldMatrix(true, true);
 
           if (Math.floor(time) % 2 === 0 && time - Math.floor(time) < delta) {
             console.log(`✅ RIGHT ARM 설정: ${object.name}`);
