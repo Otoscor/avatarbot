@@ -954,6 +954,45 @@ export default function ChatInterface() {
             "linear-gradient(to top, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.2) 15%, transparent 20%)",
         }}
       />
+      
+      {/* 우상단 UI 버튼 */}
+      <div
+        className="fixed top-0 right-0 z-20 pointer-events-auto"
+        style={{
+          marginTop: "16px",
+          marginRight: "20px", // px-5와 동일한 여백
+        }}
+      >
+        <button
+          style={{
+            display: "flex",
+            width: "40px",
+            height: "40px",
+            padding: "10px",
+            justifyContent: "center",
+            alignItems: "center",
+            gap: "10px",
+            borderRadius: "12px",
+            background: "#FFF",
+            border: "none",
+            cursor: "pointer",
+          }}
+          onClick={() => {
+            // TODO: 기능 추가 예정
+            console.log("우상단 버튼 클릭됨");
+          }}
+        >
+          {/* 아이콘 자리 - 필요시 추가 */}
+          <div
+            style={{
+              width: "20px",
+              height: "20px",
+              background: "#E5E5E5",
+              borderRadius: "4px",
+            }}
+          />
+        </button>
+      </div>
       {/* 오디오 자동 재생 허용 모달 */}
       {showAudioPermissionModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
