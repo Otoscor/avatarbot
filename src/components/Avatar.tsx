@@ -389,18 +389,7 @@ export default function Avatar() {
 
   // ===== 2단계: VRM 업데이트 루프 점검 + 3단계: 2등신 캐릭터 맞춤형 Idle 모션 =====
   useFrame((state, delta) => {
-    // 디버깅: useFrame 진입 확인
-    if (!vrm) {
-      return;
-    }
-    
-    if (!vrm.expressionManager) {
-      console.warn("⚠️ expressionManager 없음");
-      return;
-    }
-    
-    if (!vrmInitializedRef.current) {
-      console.warn("⚠️ VRM 초기화되지 않음");
+    if (!vrm || !vrm.expressionManager || !vrmInitializedRef.current) {
       return;
     }
 
@@ -415,30 +404,26 @@ export default function Avatar() {
     if (vrm.humanoid) {
       try {
         // ===== 4단계: 방어 코드 (뼈가 null일 경우 대비) =====
-
-        console.log("🎬 애니메이션 로직 시작 - time:", time.toFixed(2));
         
         // 둥실둥실(Position): Hips의 Y축 위치를 위아래로 천천히 둥실거리게
         const hips = vrm.humanoid.getNormalizedBoneNode("hips");
         if (hips) {
-          const floatingAmount = Math.sin(time * 1.2) * 0.05; // 천천히 위아래로
+          const floatingAmount = Math.sin(time * 1.2) * 0.08; // 0.05 → 0.08로 증가 (더 눈에 띄게)
           hips.position.y = floatingAmount;
-          console.log("✅ Hips 둥실거림 적용:", floatingAmount.toFixed(4));
-        } else {
-          console.warn("⚠️ Hips 뼈를 찾을 수 없음");
         }
 
         // 숨쉬기(Scale): Chest나 Spine 뼈의 스케일을 미세하게 조정
         // Chest가 없으면 Spine으로 대체
-        let chest = vrm.humanoid.getNormalizedBoneNode("chest") || 
-                    vrm.humanoid.getNormalizedBoneNode("upperChest");
-        
+        let chest =
+          vrm.humanoid.getNormalizedBoneNode("chest") ||
+          vrm.humanoid.getNormalizedBoneNode("upperChest");
+
         if (!chest) {
           // Chest가 없으면 Spine을 사용
           chest = vrm.humanoid.getNormalizedBoneNode("spine");
           console.log("ℹ️ Chest 없음, Spine 사용");
         }
-        
+
         if (chest) {
           const breathingScale = 1.0 + Math.sin(time * 1.5) * 0.03; // 1.0 ~ 1.03
           chest.scale.set(breathingScale, breathingScale, breathingScale);
@@ -504,7 +489,10 @@ export default function Avatar() {
             0.1
           );
           rightUpperArm.quaternion.setFromEuler(rightUpperArm.rotation);
-          console.log("✅ 오른팔 회전 적용:", rightUpperArm.rotation.z.toFixed(4));
+          console.log(
+            "✅ 오른팔 회전 적용:",
+            rightUpperArm.rotation.z.toFixed(4)
+          );
         } else {
           console.warn("⚠️ RightUpperArm 뼈를 찾을 수 없음");
         }
