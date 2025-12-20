@@ -1102,7 +1102,10 @@ export default function ChatInterface() {
                     gap: "8px",
                     cursor: "pointer",
                   }}
-                  onClick={() => setSelectedCharacter("test")}
+                  onClick={() => {
+                    setSelectedCharacter("test");
+                    setShowCharacterModal(false);
+                  }}
                 >
                   <div
                     style={{
@@ -1182,7 +1185,10 @@ export default function ChatInterface() {
                     gap: "8px",
                     cursor: "pointer",
                   }}
-                  onClick={() => setSelectedCharacter("jinyoung")}
+                  onClick={() => {
+                    setSelectedCharacter("jinyoung");
+                    setShowCharacterModal(false);
+                  }}
                 >
                   <div
                     style={{
