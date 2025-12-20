@@ -387,258 +387,125 @@ export default function Avatar() {
     };
   }, [currentAudio, vrm, setAudioPlaying]);
 
-  // ===== 2단계: VRM 업데이트 루프 점검 + 3단계: 2등신 캐릭터 맞춤형 Idle 모션 =====
+  // ===== useFrame 전체 교체 =====
   useFrame((state, delta) => {
+    // 1. 필수 객체 체크
     if (!vrm || !vrm.expressionManager || !vrmInitializedRef.current) {
       return;
     }
 
-    const targetEmotion = targetEmotionRef.current;
-    const lerpSpeed = 3.0;
     const time = state.clock.elapsedTime;
+    const lerpSpeed = 3.0; // 표정 변화 속도
 
-    // ===== 3단계: 2등신 캐릭터 맞춤형 Idle 모션 =====
+    // 2. 뼈 움직임 로직 (물리 업데이트보다 먼저 실행되어야 함)
     if (vrm.humanoid) {
       try {
-        // ===== 4단계: 방어 코드 (뼈가 null일 경우 대비) =====
-
-        // 둥실둥실(Position): Hips의 Y축 위치를 위아래로 천천히 둥실거리게
+        // [몸통] 둥실둥실 (위아래 움직임)
         const hips = vrm.humanoid.getNormalizedBoneNode("hips");
         if (hips) {
-          const floatingAmount = Math.sin(time * 1.2) * 0.1;
-          hips.position.y = floatingAmount;
+          // 루피는 키가 작으므로 이동 범위를 0.05로 작게 설정
+          hips.position.y = Math.sin(time * 1.5) * 0.05; 
         }
 
-        // 숨쉬기(Scale): Chest나 Spine 뼈의 스케일을 미세하게 조정
-        // Chest가 없으면 Spine으로 대체
+        // [상체] 숨쉬기 (스케일 조절)
         let chest =
           vrm.humanoid.getNormalizedBoneNode("chest") ||
-          vrm.humanoid.getNormalizedBoneNode("upperChest");
-
-        if (!chest) {
-          // Chest가 없으면 Spine을 사용
-          chest = vrm.humanoid.getNormalizedBoneNode("spine");
-          console.log("ℹ️ Chest 없음, Spine 사용");
-        }
+          vrm.humanoid.getNormalizedBoneNode("upperChest") ||
+          vrm.humanoid.getNormalizedBoneNode("spine");
 
         if (chest) {
-          const breathingScale = 1.0 + Math.sin(time * 1.5) * 0.3; // 극단적으로 크게!
-          chest.scale.set(breathingScale, breathingScale, breathingScale);
-          console.log("✅ 숨쉬기 스케일:", breathingScale.toFixed(4));
+          const s = 1.0 + Math.sin(time * 2.0) * 0.05; // 호흡을 약간 빠르게
+          chest.scale.set(s, s, s);
         }
 
-        // 척추 미세 회전 (숨쉬기)
-        const spine = vrm.humanoid.getNormalizedBoneNode("spine");
-        if (spine) {
-          const breathingRotation = Math.sin(time * 1.5) * 0.2; // 극단적으로 크게!
-          const idleSway = Math.sin(time * 0.8) * 0.15; // 극단적으로 크게!
-          spine.rotation.x = breathingRotation;
-          spine.rotation.y = idleSway;
-          spine.quaternion.setFromEuler(spine.rotation);
-          console.log(
-            "🌀 Spine 회전:",
-            breathingRotation.toFixed(4),
-            idleSway.toFixed(4)
-          );
-        }
-
-        // 머리 자연스러운 움직임
-        const head = vrm.humanoid.getNormalizedBoneNode("head");
-        if (head) {
-          const headSway = Math.sin(time * 0.5) * 0.5; // 극단적으로 크게!
-          const headNod = Math.sin(time * 0.7) * 0.3; // 극단적으로 크게!
-          head.rotation.y = headSway;
-          head.rotation.x = headNod;
-          head.quaternion.setFromEuler(head.rotation);
-          console.log("👤 Head 회전:", headSway.toFixed(4), headNod.toFixed(4));
-        }
-
-        // 팔 내리기(Rotation): -1.2 / +1.2로 확실하게 내림
+        // [팔] 차렷 자세 강제 적용 (가장 중요!)
         const leftUpperArm = vrm.humanoid.getNormalizedBoneNode("leftUpperArm");
         if (leftUpperArm) {
-          const targetRotation = -1.2; // 약 70도 아래로
-          const breathingSway = Math.sin(time * 1.5) * 0.05; // 작은 진폭
-
-          leftUpperArm.rotation.x = 0;
-          leftUpperArm.rotation.y = 0;
-          leftUpperArm.rotation.z = THREE.MathUtils.lerp(
-            leftUpperArm.rotation.z,
-            targetRotation + breathingSway,
-            0.1
-          );
+            // Z축: 팔을 아래로 내림 (-1.2 라디안 = 약 70도)
+            // Y축: 팔이 뒤로 돌아가지 않게 0으로 고정
+            leftUpperArm.rotation.z = THREE.MathUtils.lerp(leftUpperArm.rotation.z, -1.2, 0.1);
+            leftUpperArm.rotation.y = THREE.MathUtils.lerp(leftUpperArm.rotation.y, 0, 0.1);
+            leftUpperArm.rotation.x = 0;
         }
 
-        const rightUpperArm =
-          vrm.humanoid.getNormalizedBoneNode("rightUpperArm");
+        const rightUpperArm = vrm.humanoid.getNormalizedBoneNode("rightUpperArm");
         if (rightUpperArm) {
-          const targetRotation = 1.2; // 약 70도 아래로
-          const breathingSway = Math.sin(time * 1.5 + Math.PI) * 0.05; // 작은 진폭
-
-          rightUpperArm.rotation.x = 0;
-          rightUpperArm.rotation.y = 0;
-          rightUpperArm.rotation.z = THREE.MathUtils.lerp(
-            rightUpperArm.rotation.z,
-            targetRotation + breathingSway,
-            0.1
-          );
+            // Z축: 팔을 아래로 내림 (+1.2 라디안)
+            rightUpperArm.rotation.z = THREE.MathUtils.lerp(rightUpperArm.rotation.z, 1.2, 0.1);
+            rightUpperArm.rotation.y = THREE.MathUtils.lerp(rightUpperArm.rotation.y, 0, 0.1);
+            rightUpperArm.rotation.x = 0;
         }
 
-        // 팔꿈치 미세한 움직임
-        const leftLowerArm = vrm.humanoid.getNormalizedBoneNode("leftLowerArm");
-        if (leftLowerArm) {
-          const elbowBend = Math.sin(time * 1.5) * 0.08;
-          leftLowerArm.rotation.x = 0;
-          leftLowerArm.rotation.y = 0;
-          leftLowerArm.rotation.z = elbowBend;
-        }
-
-        const rightLowerArm =
-          vrm.humanoid.getNormalizedBoneNode("rightLowerArm");
-        if (rightLowerArm) {
-          const elbowBend = Math.sin(time * 1.5 + Math.PI) * 0.08;
-          rightLowerArm.rotation.x = 0;
-          rightLowerArm.rotation.y = 0;
-          rightLowerArm.rotation.z = -elbowBend;
-        }
       } catch (error) {
-        console.warn("⚠️ Idle 애니메이션 중 오류:", error);
+        console.warn("Animation Error:", error);
       }
     }
 
-    // 오디오 볼륨 계산 (립싱크용)
-    if (
-      analyserRef.current &&
-      dataArrayRef.current &&
-      audioRef.current &&
-      !audioRef.current.paused
-    ) {
-      // @ts-expect-error - getByteFrequencyData accepts Uint8Array
-      analyserRef.current.getByteFrequencyData(dataArrayRef.current);
-
-      let sum = 0;
-      for (let i = 0; i < dataArrayRef.current.length; i++) {
-        sum += dataArrayRef.current[i];
-      }
-      const averageVolume = sum / dataArrayRef.current.length;
-      volumeRef.current = Math.min(averageVolume / 255, 1.0);
+    // 3. 표정(BlendShape) 및 립싱크 로직
+    // 오디오 볼륨 계산
+    if (analyserRef.current && dataArrayRef.current && audioRef.current && !audioRef.current.paused) {
+        // @ts-expect-error - getByteFrequencyData accepts Uint8Array
+        analyserRef.current.getByteFrequencyData(dataArrayRef.current);
+        let sum = 0;
+        for (let i = 0; i < dataArrayRef.current.length; i++) sum += dataArrayRef.current[i];
+        volumeRef.current = Math.min((sum / dataArrayRef.current.length) / 255, 1.0);
     } else {
-      volumeRef.current = 0;
+        volumeRef.current = 0;
     }
 
-    // 모든 표현식 처리
     const allExpressions = vrm.expressionManager.expressions;
-    const targetWeights: Record<string, number> = {};
-
-    // Emotion 매핑
+    const targetEmotion = targetEmotionRef.current;
+    
+    // Emotion 매핑 및 가중치 계산
     const emotionMap: Record<string, string> = {
-      happy: "happy",
-      sad: "sad",
-      angry: "angry",
-      surprised: "Surprised",
-      neutral: "neutral",
+      happy: "happy", sad: "sad", angry: "angry", surprised: "Surprised", neutral: "neutral",
     };
-
     const targetPresetName = emotionMap[targetEmotion] || "neutral";
 
-    // 모든 표현식의 타겟 가중치 설정
     allExpressions.forEach((expression) => {
-      const expressionName = expression.expressionName;
-      if (expressionName === targetPresetName) {
-        targetWeights[expressionName] = 1.0;
-      } else {
-        targetWeights[expressionName] = 0.0;
-      }
-    });
+        const name = expression.expressionName;
+        let targetWeight = (name === targetPresetName) ? 1.0 : 0.0;
+        
+        // 립싱크 (aa)
+        if (name.toLowerCase() === 'aa') targetWeight = volumeRef.current * 1.5; // 입을 좀 더 크게 벌리게 1.5배
 
-    // 각 BlendShape 업데이트
-    allExpressions.forEach((expression) => {
-      const expressionName = expression.expressionName;
-      const currentWeight = blendShapeWeightsRef.current[expressionName] || 0;
-
-      let targetWeight = targetWeights[expressionName] || 0;
-
-      // 'aa' (입 벌리기) BlendShape에 볼륨 적용
-      if (expressionName.toLowerCase() === "aa") {
-        targetWeight = volumeRef.current * 0.8;
-      }
-
-      // 자동 눈 깜빡임 처리
-      const expressionNameLower = expressionName.toLowerCase();
-      const isBlinkExpression =
-        expressionName === "blink" ||
-        expressionName === "blinkLeft" ||
-        expressionName === "blinkRight" ||
-        expressionNameLower === "blink" ||
-        expressionNameLower === "blinkleft" ||
-        expressionNameLower === "blinkright";
-
-      if (isBlinkExpression) {
-        const currentTime = state.clock.elapsedTime;
-
-        if (!isBlinkingRef.current && currentTime >= nextBlinkTimeRef.current) {
-          isBlinkingRef.current = true;
-          blinkStartTimeRef.current = currentTime;
+        // 눈 깜빡임
+        if (['blink', 'blinkleft', 'blinkright'].includes(name.toLowerCase())) {
+             const currentTime = state.clock.elapsedTime;
+             if (!isBlinkingRef.current && currentTime >= nextBlinkTimeRef.current) {
+                 isBlinkingRef.current = true;
+                 blinkStartTimeRef.current = currentTime;
+             }
+             if (isBlinkingRef.current) {
+                 const elapsed = currentTime - blinkStartTimeRef.current;
+                 const duration = 0.15;
+                 if (elapsed < duration) {
+                     blinkWeightRef.current = elapsed < duration/2 
+                        ? THREE.MathUtils.lerp(0, 1, elapsed/(duration/2)) 
+                        : THREE.MathUtils.lerp(1, 0, (elapsed-duration/2)/(duration/2));
+                 } else {
+                     isBlinkingRef.current = false;
+                     blinkWeightRef.current = 0;
+                     nextBlinkTimeRef.current = currentTime + 3 + Math.random()*2;
+                 }
+                 targetWeight = blinkWeightRef.current;
+             }
         }
 
-        if (isBlinkingRef.current) {
-          const elapsed = currentTime - blinkStartTimeRef.current;
-          const blinkDuration = 0.15;
-
-          if (elapsed < blinkDuration / 2) {
-            blinkWeightRef.current = THREE.MathUtils.lerp(
-              0,
-              1.0,
-              elapsed / (blinkDuration / 2)
-            );
-          } else if (elapsed < blinkDuration) {
-            blinkWeightRef.current = THREE.MathUtils.lerp(
-              1.0,
-              0,
-              (elapsed - blinkDuration / 2) / (blinkDuration / 2)
-            );
-          } else {
-            isBlinkingRef.current = false;
-            blinkWeightRef.current = 0.0;
-            nextBlinkTimeRef.current = currentTime + 3 + Math.random() * 2;
-          }
-        } else {
-          blinkWeightRef.current = 0.0;
-        }
-
-        targetWeight = blinkWeightRef.current;
-      }
-
-      const newWeight = THREE.MathUtils.lerp(
-        currentWeight,
-        targetWeight,
-        lerpSpeed * delta
-      );
-      blendShapeWeightsRef.current[expressionName] = newWeight;
-
-      if (vrm.expressionManager) {
-        vrm.expressionManager.setValue(expressionName, newWeight);
-      }
+        const currentWeight = blendShapeWeightsRef.current[name] || 0;
+        const newWeight = THREE.MathUtils.lerp(currentWeight, targetWeight, lerpSpeed * delta);
+        blendShapeWeightsRef.current[name] = newWeight;
+        vrm.expressionManager?.setValue(name, newWeight);
     });
 
-    // LookAt 처리
+    // LookAt
     if (vrm.lookAt) {
-      targetLookAtRef.current.lerp(mousePositionRef.current, 0.1);
-
-      const lookAt = vrm.lookAt as any;
-      try {
-        if (lookAt.target !== undefined) {
-          lookAt.target = targetLookAtRef.current;
-        } else if (lookAt.lookAtTarget !== undefined) {
-          lookAt.lookAtTarget = targetLookAtRef.current;
-        } else if (lookAt.target) {
-          lookAt.target = targetLookAtRef.current;
-        }
-      } catch (error) {
-        // lookAt 업데이트 실패 시 무시
-      }
+        targetLookAtRef.current.lerp(mousePositionRef.current, 0.1);
+        (vrm.lookAt as any).lookAtTarget = targetLookAtRef.current;
     }
 
-    // ===== VRM 업데이트를 마지막에 호출 (물리/표정 반영) =====
+    // 4. VRM 필수 업데이트 (★★★★★ 여기가 가장 중요합니다!)
+    // 이 줄이 있어야 위에서 계산한 뼈와 표정 변화가 화면에 그려집니다.
     vrm.update(delta);
   });
 
