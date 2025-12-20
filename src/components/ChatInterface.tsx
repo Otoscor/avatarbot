@@ -1198,7 +1198,6 @@ export default function ChatInterface() {
                     style={{
                       display: "flex",
                       height: "172px",
-                      padding: "8px",
                       flexDirection: "column",
                       alignItems: "center",
                       justifyContent: "center",
@@ -1210,6 +1209,7 @@ export default function ChatInterface() {
                           : "1px solid #EEE",
                       background: "#FAFAFA",
                       position: "relative",
+                      overflow: "hidden",
                     }}
                   >
                     {/* 선택 체크마크 */}
@@ -1226,30 +1226,22 @@ export default function ChatInterface() {
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
+                          zIndex: 10,
                         }}
                       >
                         <Check size={14} color="#FFF" />
                       </div>
                     )}
-                    {/* 캐릭터 프리뷰 (진영 루띠) */}
-                    <div
+                    {/* 캐릭터 프리뷰 (잔망 루피) */}
+                    <Image
+                      src="/zanmangLoopyThumnbnail.jpg"
+                      alt="잔망 루피"
+                      fill
                       style={{
-                        width: "100%",
-                        height: "100%",
-                        borderRadius: "8px",
-                        position: "relative",
-                        overflow: "hidden",
+                        objectFit: "cover",
+                        borderRadius: "16px",
                       }}
-                    >
-                      <Image
-                        src="/zanmangLoopyThumnbnail.jpg"
-                        alt="진영 루띠"
-                        fill
-                        style={{
-                          objectFit: "cover",
-                        }}
-                      />
-                    </div>
+                    />
                   </div>
                   <div
                     style={{
@@ -1265,7 +1257,7 @@ export default function ChatInterface() {
                       letterSpacing: "-0.26px",
                     }}
                   >
-                    진영 루띠
+                    잔망 루피
                   </div>
                 </div>
               </div>
