@@ -118,27 +118,24 @@ export default function Avatar() {
             if (!rightUpperArm)
               console.warn("⚠️ RightUpperArm 뼈를 찾을 수 없습니다!");
 
-            // 🔍 본의 초기 rotation 값 출력
+            // 🔍 본의 초기 rotation 값 출력 (명확하게)
             if (leftUpperArm) {
-              console.log("📍 LeftUpperArm 초기 rotation:", {
-                x: leftUpperArm.rotation.x,
-                y: leftUpperArm.rotation.y,
-                z: leftUpperArm.rotation.z,
-              });
+              console.log("📍 LeftUpperArm 초기 rotation:");
+              console.log(`   X: ${leftUpperArm.rotation.x.toFixed(4)} (${(leftUpperArm.rotation.x * 180 / Math.PI).toFixed(1)}°)`);
+              console.log(`   Y: ${leftUpperArm.rotation.y.toFixed(4)} (${(leftUpperArm.rotation.y * 180 / Math.PI).toFixed(1)}°)`);
+              console.log(`   Z: ${leftUpperArm.rotation.z.toFixed(4)} (${(leftUpperArm.rotation.z * 180 / Math.PI).toFixed(1)}°)`);
             }
             if (rightUpperArm) {
-              console.log("📍 RightUpperArm 초기 rotation:", {
-                x: rightUpperArm.rotation.x,
-                y: rightUpperArm.rotation.y,
-                z: rightUpperArm.rotation.z,
-              });
+              console.log("📍 RightUpperArm 초기 rotation:");
+              console.log(`   X: ${rightUpperArm.rotation.x.toFixed(4)} (${(rightUpperArm.rotation.x * 180 / Math.PI).toFixed(1)}°)`);
+              console.log(`   Y: ${rightUpperArm.rotation.y.toFixed(4)} (${(rightUpperArm.rotation.y * 180 / Math.PI).toFixed(1)}°)`);
+              console.log(`   Z: ${rightUpperArm.rotation.z.toFixed(4)} (${(rightUpperArm.rotation.z * 180 / Math.PI).toFixed(1)}°)`);
             }
             if (hips) {
-              console.log("📍 Hips 초기 position:", {
-                x: hips.position.x,
-                y: hips.position.y,
-                z: hips.position.z,
-              });
+              console.log("📍 Hips 초기 position:");
+              console.log(`   X: ${hips.position.x.toFixed(4)}`);
+              console.log(`   Y: ${hips.position.y.toFixed(4)}`);
+              console.log(`   Z: ${hips.position.z.toFixed(4)}`);
             }
           } else {
             console.error("❌ VRM Humanoid가 없습니다!");
@@ -431,7 +428,8 @@ export default function Avatar() {
     const lerpSpeed = 3.0; // 표정 변화 속도
 
     // 🔍 실시간 디버깅: 1초마다 한 번씩 본의 값 출력
-    const shouldLog = Math.floor(time) % 2 === 0 && time - Math.floor(time) < delta;
+    const shouldLog =
+      Math.floor(time) % 2 === 0 && time - Math.floor(time) < delta;
 
     // 2. 뼈 움직임 로직 (물리 업데이트보다 먼저 실행되어야 함)
     if (vrm.humanoid) {
@@ -444,7 +442,12 @@ export default function Avatar() {
           hips.position.y = targetY;
 
           if (shouldLog) {
-            console.log("🔄 [HIPS] position.y:", hips.position.y.toFixed(4), "목표:", targetY.toFixed(4));
+            console.log(
+              "🔄 [HIPS] position.y:",
+              hips.position.y.toFixed(4),
+              "목표:",
+              targetY.toFixed(4)
+            );
           }
         }
 
@@ -463,52 +466,42 @@ export default function Avatar() {
           }
         }
 
-        // [팔] 차렷 자세 강제 적용 (가장 중요!)
+        // [팔] 🧪 극단적인 회전 테스트 - 어떤 축이 팔을 움직이는지 확인!
         const leftUpperArm = vrm.humanoid.getNormalizedBoneNode("leftUpperArm");
         if (leftUpperArm) {
-          // 🔍 변경 전 값 저장
-          const beforeZ = leftUpperArm.rotation.z;
+          // 🧪 TEST: X, Y, Z 축을 모두 극단적으로 회전시켜서 화면에서 변화 확인
+          // X축: 앞뒤로 크게 흔들기
+          const testX = Math.sin(time * 0.5) * 1.5; // -1.5 ~ +1.5 라디안 (-86° ~ +86°)
+          
+          // Y축: 좌우로 크게 흔들기
+          const testY = Math.sin(time * 0.5 + Math.PI/2) * 1.5;
+          
+          // Z축: 위아래로 크게 흔들기  
+          const testZ = Math.sin(time * 0.5 + Math.PI) * 1.5;
 
-          // Z축: 팔을 아래로 내림 (-1.2 라디안 = 약 70도)
-          // Y축: 팔이 뒤로 돌아가지 않게 0으로 고정
-          leftUpperArm.rotation.z = THREE.MathUtils.lerp(
-            leftUpperArm.rotation.z,
-            -1.2,
-            0.1
-          );
-          leftUpperArm.rotation.y = THREE.MathUtils.lerp(
-            leftUpperArm.rotation.y,
-            0,
-            0.1
-          );
-          leftUpperArm.rotation.x = 0;
+          leftUpperArm.rotation.x = testX;
+          leftUpperArm.rotation.y = testY;
+          leftUpperArm.rotation.z = testZ;
 
           if (shouldLog) {
-            console.log("🔄 [LEFT ARM] rotation.z:", beforeZ.toFixed(4), "→", leftUpperArm.rotation.z.toFixed(4), "목표: -1.2");
+            console.log("🧪 [LEFT ARM TEST] X:", testX.toFixed(2), "Y:", testY.toFixed(2), "Z:", testZ.toFixed(2));
           }
         }
 
         const rightUpperArm =
           vrm.humanoid.getNormalizedBoneNode("rightUpperArm");
         if (rightUpperArm) {
-          // 🔍 변경 전 값 저장
-          const beforeZ = rightUpperArm.rotation.z;
+          // 🧪 TEST: 오른팔도 동일하게 극단적으로 테스트
+          const testX = Math.sin(time * 0.5) * 1.5;
+          const testY = Math.sin(time * 0.5 + Math.PI/2) * 1.5;
+          const testZ = Math.sin(time * 0.5 + Math.PI) * 1.5;
 
-          // Z축: 팔을 아래로 내림 (+1.2 라디안)
-          rightUpperArm.rotation.z = THREE.MathUtils.lerp(
-            rightUpperArm.rotation.z,
-            1.2,
-            0.1
-          );
-          rightUpperArm.rotation.y = THREE.MathUtils.lerp(
-            rightUpperArm.rotation.y,
-            0,
-            0.1
-          );
-          rightUpperArm.rotation.x = 0;
+          rightUpperArm.rotation.x = testX;
+          rightUpperArm.rotation.y = testY;
+          rightUpperArm.rotation.z = testZ;
 
           if (shouldLog) {
-            console.log("🔄 [RIGHT ARM] rotation.z:", beforeZ.toFixed(4), "→", rightUpperArm.rotation.z.toFixed(4), "목표: +1.2");
+            console.log("🧪 [RIGHT ARM TEST] X:", testX.toFixed(2), "Y:", testY.toFixed(2), "Z:", testZ.toFixed(2));
           }
         }
       } catch (error) {
