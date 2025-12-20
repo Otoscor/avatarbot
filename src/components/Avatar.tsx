@@ -151,7 +151,7 @@ export default function Avatar() {
         console.error("VRM 파일 로드 중 오류 발생:", error);
       }
     );
-  }, []);
+  }, [selectedCharacter]); // selectedCharacter가 변경될 때마다 재로드
 
   useEffect(() => {
     if (gltf && gltf.scene && groupRef.current) {
