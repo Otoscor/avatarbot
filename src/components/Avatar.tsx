@@ -461,7 +461,11 @@ export default function Avatar() {
     const shouldLog =
       Math.floor(time) % 2 === 0 && time - Math.floor(time) < delta;
 
-    // 2. 뼈 움직임 로직 (물리 업데이트보다 먼저 실행되어야 함)
+    // ⚠️ 중요: vrm.update()를 먼저 호출해야 합니다!
+    // 이후에 본 rotation을 설정해야 덮어쓰기가 안 됩니다.
+    vrm.update(delta);
+
+    // 2. 뼈 움직임 로직 (vrm.update 이후에 실행)
     if (vrm.humanoid) {
       try {
         // [몸통] 둥실둥실 (위아래 움직임)
@@ -524,6 +528,9 @@ export default function Avatar() {
             0.1
           );
 
+          // ⚡ 강제로 매트릭스 업데이트
+          leftUpperArm.updateMatrix();
+
           if (shouldLog) {
             console.log(
               "💪 [LEFT ARM] X:",
@@ -559,6 +566,9 @@ export default function Avatar() {
             targetZ,
             0.1
           );
+
+          // ⚡ 강제로 매트릭스 업데이트
+          rightUpperArm.updateMatrix();
 
           if (shouldLog) {
             console.log(
@@ -661,12 +671,7 @@ export default function Avatar() {
       (vrm.lookAt as any).lookAtTarget = targetLookAtRef.current;
     }
 
-    // 4. VRM 필수 업데이트 (★★★★★ 여기가 가장 중요합니다!)
-    // 이 줄이 있어야 위에서 계산한 뼈와 표정 변화가 화면에 그려집니다.
-    if (shouldLog) {
-      console.log("✅ vrm.update(delta) 호출됨, delta:", delta.toFixed(4));
-    }
-    vrm.update(delta);
+    // vrm.update()는 이미 맨 위에서 호출됨!
   });
 
   return (
