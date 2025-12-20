@@ -8,7 +8,6 @@ export interface Message {
 }
 
 export type Emotion = "happy" | "sad" | "angry" | "neutral" | "surprised";
-export type CharacterType = "test" | "jinyoung";
 
 interface ChatStore {
   messages: Message[];
@@ -16,13 +15,13 @@ interface ChatStore {
   currentEmotion: Emotion;
   currentAudio: string | null; // base64 인코딩된 오디오 데이터
   isAudioPlaying: boolean; // 오디오 재생 중 여부
-  selectedCharacter: CharacterType; // 선택된 캐릭터
+  selectedCharacter: string; // 선택된 캐릭터 ("test" 또는 "jinyoung")
   addMessage: (message: Omit<Message, "id" | "timestamp">) => void;
   setLoading: (loading: boolean) => void;
   setEmotion: (emotion: Emotion) => void;
   setAudio: (audio: string | null) => void;
   setAudioPlaying: (playing: boolean) => void;
-  setSelectedCharacter: (character: CharacterType) => void;
+  setSelectedCharacter: (character: string) => void;
   clearMessages: () => void;
 }
 

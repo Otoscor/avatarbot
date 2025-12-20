@@ -97,71 +97,46 @@ export default function Avatar() {
   };
 
   useEffect(() => {
+    // VRMLoaderPlugin을 등록한 로더 생성
     const loader = new GLTFLoader();
-    
-    // 선택된 캐릭터에 따라 다른 파일 로드
-    const modelPath = selectedCharacter === "test" ? "/test.vrm" : "/zanmangloopy.glb";
-    const useVRM = selectedCharacter === "test";
-    
-    console.log(`Loading ${useVRM ? 'VRM' : 'GLB'} model:`, modelPath, "selectedCharacter:", selectedCharacter);
-    
-    if (useVRM) {
-      // VRM 모델 로드 (테스트 캐릭터)
-      loader.register((parser) => new VRMLoaderPlugin(parser));
-    }
+    loader.register((parser) => new VRMLoaderPlugin(parser));
 
+    // VRM 파일 로드
     loader.load(
-      modelPath,
+      "/avatar.vrm",
       (loadedGltf) => {
-        console.log(`${useVRM ? 'VRM' : 'GLB'} 로드 성공:`, modelPath);
         setGltf(loadedGltf);
-
-        if (useVRM) {
-          // VRM 캐릭터 처리
-          const vrmData = loadedGltf.userData.vrm as VRM;
-          if (vrmData) {
-            console.log("VRM 데이터:", vrmData);
-            setVrm(vrmData);
-            
-            // 초기 BlendShape 가중치 설정
-            const initialWeights: Record<string, number> = {};
-            if (vrmData.expressionManager) {
-              vrmData.expressionManager.expressions.forEach((expression) => {
-                initialWeights[expression.expressionName] = 0;
-              });
-              console.log(
-                "사용 가능한 BlendShape:",
-                vrmData.expressionManager.expressions.map((e) => e.expressionName)
-              );
-            }
-            blendShapeWeightsRef.current = initialWeights;
-
-            // lookAt 기능 확인
-            if (vrmData.lookAt) {
-              console.log("lookAt 기능 사용 가능");
-            } else {
-              console.warn("lookAt 기능을 사용할 수 없습니다");
-            }
+        const vrmData = loadedGltf.userData.vrm as VRM;
+        if (vrmData) {
+          setVrm(vrmData);
+          // 초기 BlendShape 가중치 설정
+          const initialWeights: Record<string, number> = {};
+          if (vrmData.expressionManager) {
+            vrmData.expressionManager.expressions.forEach((expression) => {
+              initialWeights[expression.expressionName] = 0;
+            });
+            // 사용 가능한 BlendShape 이름 로그 출력 (디버깅용)
+            console.log(
+              "사용 가능한 BlendShape:",
+              vrmData.expressionManager.expressions.map((e) => e.expressionName)
+            );
           }
-        } else {
-          // GLB 캐릭터 처리 (잔망 루피)
-          console.log("GLB 모델 로드:", loadedGltf);
-          setVrm(null); // VRM 기능 없음
+          blendShapeWeightsRef.current = initialWeights;
+
+          // lookAt 기능 확인
+          if (vrmData.lookAt) {
+            console.log("lookAt 기능 사용 가능");
+          } else {
+            console.warn("lookAt 기능을 사용할 수 없습니다");
+          }
         }
       },
       undefined,
       (error) => {
-        console.error(`${useVRM ? 'VRM' : 'GLB'} 로드 실패:`, error);
+        console.error("VRM 파일 로드 중 오류 발생:", error);
       }
     );
-
-    // 캐릭터 변경 시 기존 모델 정리
-    return () => {
-      if (gltf && groupRef.current) {
-        groupRef.current.remove(gltf.scene);
-      }
-    };
-  }, [selectedCharacter]);
+  }, []);
 
   useEffect(() => {
     if (gltf && gltf.scene && groupRef.current) {
