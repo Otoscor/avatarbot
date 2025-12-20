@@ -218,7 +218,7 @@ export default function Avatar() {
     );
   }, [selectedCharacter]);
 
-  // GLTF 씬을 그룹에 추가
+  // GLTF 씬을 그룹에 추가 + Skeleton 시각화
   useEffect(() => {
     if (gltf && gltf.scene && groupRef.current) {
       // 기존 씬 제거
@@ -234,6 +234,32 @@ export default function Avatar() {
       groupRef.current.add(gltf.scene);
 
       console.log("✅ VRM 씬이 그룹에 추가됨");
+
+      // 🔍 1단계: Skeleton 시각화 및 본 이름 전체 출력
+      console.log("=== 🦴 SKELETON 진단 시작 ===");
+      
+      // 모든 Object3D 순회하면서 본 찾기
+      const bones: any[] = [];
+      gltf.scene.traverse((object: any) => {
+        if (object.isBone || object.type === "Bone") {
+          bones.push(object);
+          console.log(`🦴 본 발견: ${object.name} (type: ${object.type})`);
+        }
+      });
+
+      console.log(`✅ 총 ${bones.length}개의 본 발견`);
+
+      // SkeletonHelper 추가 (뼈대를 눈으로 확인)
+      if (bones.length > 0) {
+        const skeletonHelper = new THREE.SkeletonHelper(gltf.scene);
+        skeletonHelper.visible = true;
+        groupRef.current.add(skeletonHelper);
+        console.log("✅ SkeletonHelper 추가됨 (뼈대가 빨간 선으로 보일 겁니다)");
+      } else {
+        console.warn("⚠️ 본이 하나도 없습니다!");
+      }
+
+      console.log("=== 🦴 SKELETON 진단 완료 ===");
     }
   }, [gltf, selectedCharacter]);
 
@@ -459,36 +485,68 @@ export default function Avatar() {
     // 1. VRM 업데이트 (필수!)
     vrm.update(delta);
 
-    // 2. 뼈 애니메이션: vrm.scene 직접 순회
+    // 2. 뼈 애니메이션: vrm.scene 직접 순회 (강화된 디버깅)
+    let leftArmFound = false;
+    let rightArmFound = false;
+    let hipsFound = false;
+    let spineFound = false;
+
     if (vrm.scene) {
       vrm.scene.traverse((object: any) => {
         if (!object.name) return;
 
         // 왼팔 내리기 (A-pose)
-        if (object.name === "leftUpperArm") {
+        if (object.name.toLowerCase().includes("leftupperarm") || 
+            object.name.toLowerCase().includes("left_upperarm") ||
+            object.name === "leftUpperArm") {
+          leftArmFound = true;
+          const beforeZ = object.rotation.z;
           object.rotation.x = 0.5;
           object.rotation.y = 0.2;
           object.rotation.z = -0.3;
+          
+          // 2초마다 로그
+          if (Math.floor(time) % 2 === 0 && time - Math.floor(time) < delta) {
+            console.log(`🔧 LEFT ARM: ${object.name} | Z: ${beforeZ.toFixed(3)} → ${object.rotation.z.toFixed(3)}`);
+          }
         }
 
         // 오른팔 내리기 (A-pose)
-        if (object.name === "rightUpperArm") {
+        if (object.name.toLowerCase().includes("rightupperarm") || 
+            object.name.toLowerCase().includes("right_upperarm") ||
+            object.name === "rightUpperArm") {
+          rightArmFound = true;
+          const beforeZ = object.rotation.z;
           object.rotation.x = 0.5;
           object.rotation.y = -0.2;
           object.rotation.z = 0.3;
+          
+          if (Math.floor(time) % 2 === 0 && time - Math.floor(time) < delta) {
+            console.log(`🔧 RIGHT ARM: ${object.name} | Z: ${beforeZ.toFixed(3)} → ${object.rotation.z.toFixed(3)}`);
+          }
         }
 
         // 몸통 둥실거림
-        if (object.name === "hips") {
+        if (object.name.toLowerCase().includes("hips") || object.name === "hips") {
+          hipsFound = true;
           object.position.y = Math.sin(time * 1.2) * 0.03;
         }
 
         // 숨쉬기
-        if (object.name === "spine") {
+        if (object.name.toLowerCase().includes("spine") || object.name === "spine") {
+          spineFound = true;
           const s = 1.0 + Math.sin(time * 1.5) * 0.02;
           object.scale.set(s, s, s);
         }
       });
+
+      // 본을 못 찾았으면 경고
+      if (Math.floor(time) % 3 === 0 && time - Math.floor(time) < delta) {
+        if (!leftArmFound) console.warn("⚠️ leftUpperArm 본을 찾을 수 없습니다!");
+        if (!rightArmFound) console.warn("⚠️ rightUpperArm 본을 찾을 수 없습니다!");
+        if (!hipsFound) console.warn("⚠️ hips 본을 찾을 수 없습니다!");
+        if (!spineFound) console.warn("⚠️ spine 본을 찾을 수 없습니다!");
+      }
     }
 
     // 3. 표정(BlendShape) 및 립싱크 로직
