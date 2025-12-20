@@ -1147,7 +1147,7 @@ export default function ChatInterface() {
                       alt="테스트"
                       fill
                       style={{
-                        objectFit: "cover",
+                        objectFit: "contain",
                         borderRadius: "16px",
                       }}
                     />
