@@ -1107,7 +1107,6 @@ export default function ChatInterface() {
                     style={{
                       display: "flex",
                       height: "172px",
-                      padding: "8px",
                       flexDirection: "column",
                       alignItems: "center",
                       justifyContent: "center",
@@ -1119,6 +1118,7 @@ export default function ChatInterface() {
                           : "1px solid #EEE",
                       background: "#FAFAFA",
                       position: "relative",
+                      overflow: "hidden",
                     }}
                   >
                     {/* 선택 체크마크 */}
@@ -1135,34 +1135,22 @@ export default function ChatInterface() {
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
+                          zIndex: 10,
                         }}
                       >
                         <Check size={14} color="#FFF" />
                       </div>
                     )}
                     {/* 캐릭터 프리뷰 (테스트) */}
-                    <div
+                    <Image
+                      src="/TestThumbnail.jpg"
+                      alt="테스트"
+                      fill
                       style={{
-                        width: "100%",
-                        height: "100%",
-                        background: "#E5E5E5",
-                        borderRadius: "8px",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
+                        objectFit: "cover",
+                        borderRadius: "16px",
                       }}
-                    >
-                      <span
-                        style={{
-                          color: "#999",
-                          fontSize: "12px",
-                          fontFamily:
-                            '"Pretendard Variable", Pretendard, sans-serif',
-                        }}
-                      >
-                        테스트
-                      </span>
-                    </div>
+                    />
                   </div>
                   <div
                     style={{
