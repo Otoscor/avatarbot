@@ -469,19 +469,19 @@ export default function Avatar() {
       vrm.scene.traverse((object: any) => {
         if (!object.name) return;
 
-        // 왼팔 내리기 (A-pose) - Normalized 제외!
+        // 왼팔 내리기 + 몸통에 붙이기
         if (
           (object.name.toLowerCase().includes("leftupperarm") ||
-          object.name.toLowerCase().includes("left_upperarm") ||
-          object.name === "leftUpperArm") &&
+            object.name.toLowerCase().includes("left_upperarm") ||
+            object.name === "leftUpperArm") &&
           !object.name.includes("Normalized")
         ) {
           leftArmFound = true;
           const beforeZ = object.rotation.z;
-          object.rotation.x = 0.5;
-          object.rotation.y = 0;
-          object.rotation.z = -1.5; // 확실하게 아래로!
-          
+          object.rotation.x = 0.5; // 앞으로 약간
+          object.rotation.y = 0.3; // 몸통에 붙이기 (안쪽으로)
+          object.rotation.z = -1.5; // 아래로
+
           // 강제로 매트릭스 업데이트
           object.updateMatrixWorld(true);
 
@@ -495,19 +495,19 @@ export default function Avatar() {
           }
         }
 
-        // 오른팔 내리기 (A-pose) - Normalized 제외!
+        // 오른팔 내리기 + 몸통에 붙이기
         if (
           (object.name.toLowerCase().includes("rightupperarm") ||
-          object.name.toLowerCase().includes("right_upperarm") ||
-          object.name === "rightUpperArm") &&
+            object.name.toLowerCase().includes("right_upperarm") ||
+            object.name === "rightUpperArm") &&
           !object.name.includes("Normalized")
         ) {
           rightArmFound = true;
           const beforeZ = object.rotation.z;
-          object.rotation.x = 0.5;
-          object.rotation.y = 0;
-          object.rotation.z = 1.5; // 확실하게 아래로!
-          
+          object.rotation.x = 0.5; // 앞으로 약간
+          object.rotation.y = -0.3; // 몸통에 붙이기 (안쪽으로)
+          object.rotation.z = 1.5; // 아래로
+
           // 강제로 매트릭스 업데이트
           object.updateMatrixWorld(true);
 
@@ -529,13 +529,13 @@ export default function Avatar() {
           object.position.y = Math.sin(time * 1.2) * 0.03;
         }
 
-        // 숨쉬기 (범위 축소)
+        // 숨쉬기 (범위 더 축소)
         if (
           object.name.toLowerCase().includes("spine") ||
           object.name === "spine"
         ) {
           spineFound = true;
-          const s = 1.0 + Math.sin(time * 1.5) * 0.01; // 0.02 → 0.01로 축소
+          const s = 1.0 + Math.sin(time * 1.5) * 0.005; // 0.01 → 0.005로 더 축소
           object.scale.set(s, s, s);
         }
       });
