@@ -82,6 +82,8 @@ export default function ChatInterface() {
   const [showAudioPermissionModal, setShowAudioPermissionModal] =
     useState(false); // 오디오 자동 재생 허용 모달
   const [audioContextUnlocked, setAudioContextUnlocked] = useState(false); // 오디오 컨텍스트 활성화 여부
+  const [showCharacterModal, setShowCharacterModal] = useState(false); // 캐릭터 선택 모달
+  const [selectedCharacter, setSelectedCharacter] = useState("test"); // 선택된 캐릭터 ("test" 또는 "jinyoung")
   const permissionDeniedRef = useRef<boolean>(false); // 권한 거부 ref (재시도 방지용)
   const audioContextRef = useRef<AudioContext | null>(null); // 오디오 컨텍스트 ref
   const speechSilenceTimerRef = useRef<NodeJS.Timeout | null>(null); // 음성 침묵 감지 타이머
@@ -955,7 +957,7 @@ export default function ChatInterface() {
         }}
       />
       
-      {/* 우상단 UI 버튼 */}
+      {/* 우상단 캐릭터 선택 버튼 */}
       <div
         className="fixed top-0 right-0 z-20 pointer-events-auto"
         style={{
@@ -978,11 +980,10 @@ export default function ChatInterface() {
             cursor: "pointer",
           }}
           onClick={() => {
-            // TODO: 기능 추가 예정
-            console.log("우상단 버튼 클릭됨");
+            setShowCharacterModal(true);
           }}
         >
-          {/* 아이콘 자리 - 필요시 추가 */}
+          {/* 캐릭터 아이콘 */}
           <div
             style={{
               width: "20px",
@@ -993,6 +994,261 @@ export default function ChatInterface() {
           />
         </button>
       </div>
+      
+      {/* 캐릭터 선택 모달 */}
+      {showCharacterModal && (
+        <>
+          {/* Dimmed 배경 */}
+          <div
+            className="fixed inset-0 z-40 bg-black/50"
+            style={{
+              backdropFilter: "blur(4px)",
+            }}
+            onClick={() => setShowCharacterModal(false)}
+          />
+          
+          {/* 모달 */}
+          <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+            <div
+              className="pointer-events-auto"
+              style={{
+                width: "320px",
+                height: "320px",
+                borderRadius: "16px",
+                border: "1px solid rgba(255, 255, 255, 0.40)",
+                background: "#FFF",
+                backdropFilter: "blur(10px)",
+                padding: "16px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "16px",
+              }}
+            >
+              {/* 헤더 */}
+              <div
+                style={{
+                  display: "flex",
+                  width: "288px",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                {/* 왼쪽 타이틀 */}
+                <h3
+                  style={{
+                    color: "#1D1D1D",
+                    fontFamily: '"Noto Sans KR", "Pretendard Variable", Pretendard, sans-serif',
+                    fontSize: "14px",
+                    fontStyle: "normal",
+                    fontWeight: 500,
+                    lineHeight: "14px",
+                    letterSpacing: "-0.28px",
+                    margin: 0,
+                  }}
+                >
+                  캐릭터 선택창
+                </h3>
+                
+                {/* 오른쪽 X 버튼 */}
+                <button
+                  style={{
+                    display: "flex",
+                    width: "32px",
+                    height: "32px",
+                    padding: "8px",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    gap: "8px",
+                    flexShrink: 0,
+                    borderRadius: "8px",
+                    border: "1px solid #EEE",
+                    background: "#FAFAFA",
+                    cursor: "pointer",
+                  }}
+                  onClick={() => setShowCharacterModal(false)}
+                >
+                  <X size={16} color="#1D1D1D" />
+                </button>
+              </div>
+              
+              {/* 캐릭터 선택 컨테이너 */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "8px",
+                  flex: 1,
+                }}
+              >
+                {/* 테스트 캐릭터 */}
+                <div
+                  style={{
+                    display: "flex",
+                    width: "140px",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: "8px",
+                    cursor: "pointer",
+                  }}
+                  onClick={() => setSelectedCharacter("test")}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      height: "172px",
+                      padding: "8px",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      alignSelf: "stretch",
+                      borderRadius: "16px",
+                      border: selectedCharacter === "test" 
+                        ? "1px solid #5A35EC" 
+                        : "1px solid #EEE",
+                      background: "#FAFAFA",
+                      position: "relative",
+                    }}
+                  >
+                    {/* 선택 체크마크 */}
+                    {selectedCharacter === "test" && (
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: "8px",
+                          left: "8px",
+                          width: "20px",
+                          height: "20px",
+                          borderRadius: "50%",
+                          background: "#5A35EC",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <Check size={14} color="#FFF" />
+                      </div>
+                    )}
+                    {/* 캐릭터 프리뷰 (테스트) */}
+                    <div
+                      style={{
+                        width: "80px",
+                        height: "80px",
+                        background: "#E5E5E5",
+                        borderRadius: "8px",
+                      }}
+                    />
+                  </div>
+                  <div
+                    style={{
+                      alignSelf: "stretch",
+                      color: "#1D1D1D",
+                      textAlign: "center",
+                      fontFamily: '"Noto Sans KR", "Pretendard Variable", Pretendard, sans-serif',
+                      fontSize: "13px",
+                      fontStyle: "normal",
+                      fontWeight: 500,
+                      lineHeight: "20px",
+                      letterSpacing: "-0.26px",
+                    }}
+                  >
+                    테스트
+                  </div>
+                </div>
+                
+                {/* 진영 루띠 캐릭터 */}
+                <div
+                  style={{
+                    display: "flex",
+                    width: "140px",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: "8px",
+                    cursor: "pointer",
+                  }}
+                  onClick={() => setSelectedCharacter("jinyoung")}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      height: "172px",
+                      padding: "8px",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      alignSelf: "stretch",
+                      borderRadius: "16px",
+                      border: selectedCharacter === "jinyoung" 
+                        ? "1px solid #5A35EC" 
+                        : "1px solid #EEE",
+                      background: "#FAFAFA",
+                      position: "relative",
+                    }}
+                  >
+                    {/* 선택 체크마크 */}
+                    {selectedCharacter === "jinyoung" && (
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: "8px",
+                          left: "8px",
+                          width: "20px",
+                          height: "20px",
+                          borderRadius: "50%",
+                          background: "#5A35EC",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
+                        <Check size={14} color="#FFF" />
+                      </div>
+                    )}
+                    {/* 캐릭터 프리뷰 (진영 루띠 - 크리스마스 테마) */}
+                    <div
+                      style={{
+                        width: "100%",
+                        height: "100%",
+                        background: "linear-gradient(135deg, #D4A574 0%, #8B6F47 100%)",
+                        borderRadius: "8px",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        position: "relative",
+                        overflow: "hidden",
+                      }}
+                    >
+                      {/* 크리스마스 테마 데코레이션 표현 */}
+                      <div
+                        style={{
+                          width: "60px",
+                          height: "60px",
+                          borderRadius: "50%",
+                          background: "#FFB5C5",
+                        }}
+                      />
+                    </div>
+                  </div>
+                  <div
+                    style={{
+                      alignSelf: "stretch",
+                      color: "#1D1D1D",
+                      textAlign: "center",
+                      fontFamily: '"Noto Sans KR", "Pretendard Variable", Pretendard, sans-serif',
+                      fontSize: "13px",
+                      fontStyle: "normal",
+                      fontWeight: 500,
+                      lineHeight: "20px",
+                      letterSpacing: "-0.26px",
+                    }}
+                  >
+                    진영 루띠
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
       {/* 오디오 자동 재생 허용 모달 */}
       {showAudioPermissionModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
