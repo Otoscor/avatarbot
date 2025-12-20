@@ -447,119 +447,50 @@ export default function Avatar() {
     };
   }, [currentAudio, vrm, setAudioPlaying]);
 
-  // ===== useFrame 전체 교체 =====
+  // ===== 🔥 완전히 새로운 접근: GLTF Scene 직접 조작 =====
   useFrame((state, delta) => {
-    // 1. 필수 객체 체크
-    if (!vrm || !vrm.expressionManager || !vrmInitializedRef.current) {
+    if (!vrm || !vrm.expressionManager || !gltf || !vrmInitializedRef.current) {
       return;
     }
 
     const time = state.clock.elapsedTime;
-    const lerpSpeed = 3.0; // 표정 변화 속도
 
-    // 🔍 실시간 디버깅: 1초마다 한 번씩 본의 값 출력
-    const shouldLog =
-      Math.floor(time) % 2 === 0 && time - Math.floor(time) < delta;
-
-    // ⚠️ 중요: vrm.update()를 먼저 호출해야 합니다!
-    // 이후에 본 rotation을 설정해야 덮어쓰기가 안 됩니다.
+    // 1. 먼저 VRM 업데이트 (표정, 립싱크 등)
     vrm.update(delta);
 
-    // 2. 뼈 움직임 로직 (vrm.update 이후에 실행)
-    if (vrm.humanoid) {
-      try {
-        // [몸통] 둥실둥실 (위아래 움직임) - Raw Bone 사용
-        const hipsRaw = vrm.humanoid.getRawBoneNode("hips");
-        if (hipsRaw) {
-          const targetY = Math.sin(time * 1.5) * 0.03; // 미세하게
-          hipsRaw.position.y = targetY;
+    // 2. GLTF Scene을 직접 순회해서 본 찾기 및 조작
+    if (gltf.scene) {
+      gltf.scene.traverse((object) => {
+        if (!object.name) return;
+
+        // 왼팔 - A-pose로 내리기
+        if (object.name === "leftUpperArm") {
+          // 극단적인 회전으로 확실하게 변화 확인
+          object.rotation.x = 0.5;
+          object.rotation.y = 0;
+          object.rotation.z = -1.5; // 확실하게 아래로!
+          console.log("✅ LEFT ARM 조작:", object.rotation.z);
         }
 
-        // [상체] 숨쉬기 (스케일 조절) - Raw Bone 사용
-        let chestRaw =
-          vrm.humanoid.getRawBoneNode("chest") ||
-          vrm.humanoid.getRawBoneNode("upperChest") ||
-          vrm.humanoid.getRawBoneNode("spine");
-
-        if (chestRaw) {
-          const s = 1.0 + Math.sin(time * 1.5) * 0.02; // 미세하게
-          chestRaw.scale.set(s, s, s);
+        // 오른팔 - A-pose로 내리기  
+        if (object.name === "rightUpperArm") {
+          object.rotation.x = 0.5;
+          object.rotation.y = 0;
+          object.rotation.z = 1.5; // 확실하게 아래로!
+          console.log("✅ RIGHT ARM 조작:", object.rotation.z);
         }
 
-        // [팔] A-pose 적용 - getRawBoneNode 사용 (실제 skeleton 조작)
-        const leftUpperArmRaw = vrm.humanoid.getRawBoneNode("leftUpperArm");
-        if (leftUpperArmRaw) {
-          // A-pose: 팔을 자연스럽게 아래로
-          const targetX = 0.5; // 약 29° 앞으로
-          const targetY = 0.2; // 약 11° 안쪽으로
-          const targetZ = -0.3; // 약 -17° 아래로
-
-          // 부드럽게 이동 (lerp)
-          leftUpperArmRaw.rotation.x = THREE.MathUtils.lerp(
-            leftUpperArmRaw.rotation.x,
-            targetX,
-            0.1
-          );
-          leftUpperArmRaw.rotation.y = THREE.MathUtils.lerp(
-            leftUpperArmRaw.rotation.y,
-            targetY,
-            0.1
-          );
-          leftUpperArmRaw.rotation.z = THREE.MathUtils.lerp(
-            leftUpperArmRaw.rotation.z,
-            targetZ,
-            0.1
-          );
-
-          if (shouldLog) {
-            console.log(
-              "💪 [LEFT ARM RAW] X:",
-              leftUpperArmRaw.rotation.x.toFixed(2),
-              "Y:",
-              leftUpperArmRaw.rotation.y.toFixed(2),
-              "Z:",
-              leftUpperArmRaw.rotation.z.toFixed(2)
-            );
-          }
+        // 몸통 - 둥실둥실
+        if (object.name === "hips") {
+          object.position.y = Math.sin(time * 1.2) * 0.1;
         }
 
-        const rightUpperArmRaw = vrm.humanoid.getRawBoneNode("rightUpperArm");
-        if (rightUpperArmRaw) {
-          // A-pose: 오른팔도 대칭으로
-          const targetX = 0.5; // 약 29° 앞으로
-          const targetY = -0.2; // 약 -11° 안쪽으로 (대칭)
-          const targetZ = 0.3; // 약 17° 아래로 (대칭)
-
-          rightUpperArmRaw.rotation.x = THREE.MathUtils.lerp(
-            rightUpperArmRaw.rotation.x,
-            targetX,
-            0.1
-          );
-          rightUpperArmRaw.rotation.y = THREE.MathUtils.lerp(
-            rightUpperArmRaw.rotation.y,
-            targetY,
-            0.1
-          );
-          rightUpperArmRaw.rotation.z = THREE.MathUtils.lerp(
-            rightUpperArmRaw.rotation.z,
-            targetZ,
-            0.1
-          );
-
-          if (shouldLog) {
-            console.log(
-              "💪 [RIGHT ARM RAW] X:",
-              rightUpperArmRaw.rotation.x.toFixed(2),
-              "Y:",
-              rightUpperArmRaw.rotation.y.toFixed(2),
-              "Z:",
-              rightUpperArmRaw.rotation.z.toFixed(2)
-            );
-          }
+        // 상체 - 숨쉬기
+        if (object.name === "spine") {
+          const scale = 1.0 + Math.sin(time * 1.5) * 0.05;
+          object.scale.set(scale, scale, scale);
         }
-      } catch (error) {
-        console.warn("Animation Error:", error);
-      }
+      });
     }
 
     // 3. 표정(BlendShape) 및 립싱크 로직
