@@ -1227,7 +1227,8 @@ export default function ChatInterface() {
                       alt="잔망 루피"
                       fill
                       style={{
-                        objectFit: "contain",
+                        objectFit: "cover",
+                        objectPosition: "center 30%",
                         borderRadius: "16px",
                       }}
                     />
