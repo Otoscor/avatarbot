@@ -78,10 +78,13 @@ export default function ChatInterface() {
   const messageDisplayTimerRef = useRef<NodeJS.Timeout | null>(null); // 답변 표시 타이머
   const [showMessage, setShowMessage] = useState(false); // 답변 표시 여부
   const [interimTranscript, setInterimTranscript] = useState(""); // 중간 결과 (말하는 중 표시용)
-  const [showAudioPermissionModal, setShowAudioPermissionModal] = useState(false); // 오디오 자동 재생 허용 모달
+  const [currentSpeechText, setCurrentSpeechText] = useState(""); // 현재 수집 중인 전체 음성 텍스트
+  const [showAudioPermissionModal, setShowAudioPermissionModal] =
+    useState(false); // 오디오 자동 재생 허용 모달
   const [audioContextUnlocked, setAudioContextUnlocked] = useState(false); // 오디오 컨텍스트 활성화 여부
   const permissionDeniedRef = useRef<boolean>(false); // 권한 거부 ref (재시도 방지용)
   const audioContextRef = useRef<AudioContext | null>(null); // 오디오 컨텍스트 ref
+  const speechSilenceTimerRef = useRef<NodeJS.Timeout | null>(null); // 음성 침묵 감지 타이머
   const {
     messages,
     isLoading,
@@ -700,7 +703,7 @@ export default function ChatInterface() {
   useEffect(() => {
     // 로컬 스토리지에서 이전 허용 여부 확인
     const audioPermission = localStorage.getItem("audioAutoplayPermission");
-    
+
     if (audioPermission === "granted") {
       // 이미 허용된 경우 오디오 컨텍스트 활성화
       unlockAudioContext();
@@ -718,7 +721,8 @@ export default function ChatInterface() {
   const unlockAudioContext = useCallback(async () => {
     try {
       // AudioContext 생성
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      const AudioContextClass =
+        window.AudioContext || (window as any).webkitAudioContext;
       if (!AudioContextClass) {
         console.warn("AudioContext를 지원하지 않는 브라우저입니다.");
         return;
@@ -835,8 +839,8 @@ export default function ChatInterface() {
                 fontFamily: '"Pretendard Variable", Pretendard, sans-serif',
               }}
             >
-              캐릭터의 음성을 자동으로 재생하려면 오디오 자동 재생을 허용해주세요.
-              화면을 터치하여 허용해주세요.
+              캐릭터의 음성을 자동으로 재생하려면 오디오 자동 재생을
+              허용해주세요. 화면을 터치하여 허용해주세요.
             </p>
             <div className="flex gap-3">
               <button
@@ -854,7 +858,8 @@ export default function ChatInterface() {
                 onClick={handleAllowAudioAutoplay}
                 className="flex-1 rounded-xl px-4 py-3 text-sm font-medium text-white transition-colors"
                 style={{
-                  background: "linear-gradient(180deg, #8569F2 0%, #5A35EC 100%)",
+                  background:
+                    "linear-gradient(180deg, #8569F2 0%, #5A35EC 100%)",
                   fontFamily: '"Pretendard Variable", Pretendard, sans-serif',
                 }}
               >
@@ -939,7 +944,7 @@ export default function ChatInterface() {
                 >
                   {currentMessage.content}
                 </p>
-              ) : listeningState === "speaking" && interimTranscript ? (
+              ) : listeningState === "speaking" && (interimTranscript || currentSpeechText) ? (
                 <span
                   style={{
                     color: "#FFF",
@@ -951,7 +956,23 @@ export default function ChatInterface() {
                     letterSpacing: "-0.26px",
                   }}
                 >
-                  {interimTranscript}
+                  {currentSpeechText && interimTranscript
+                    ? `${currentSpeechText} ${interimTranscript}`
+                    : interimTranscript || currentSpeechText}
+                </span>
+              ) : listeningState === "processing" ? (
+                <span
+                  style={{
+                    color: "#FFF",
+                    fontFamily: '"Pretendard Variable", Pretendard, sans-serif',
+                    fontSize: "13px",
+                    fontStyle: "normal",
+                    fontWeight: 400,
+                    lineHeight: "20px",
+                    letterSpacing: "-0.26px",
+                  }}
+                >
+                  전달 중...
                 </span>
               ) : listeningState === "listening" && !isMuted ? (
                 <span
