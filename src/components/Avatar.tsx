@@ -393,9 +393,6 @@ export default function Avatar() {
       return;
     }
 
-    // ===== 2단계: VRM 업데이트를 가장 먼저 호출 =====
-    vrm.update(delta);
-
     const targetEmotion = targetEmotionRef.current;
     const lerpSpeed = 3.0;
     const time = state.clock.elapsedTime;
@@ -408,9 +405,8 @@ export default function Avatar() {
         // 둥실둥실(Position): Hips의 Y축 위치를 위아래로 천천히 둥실거리게
         const hips = vrm.humanoid.getNormalizedBoneNode("hips");
         if (hips) {
-          const floatingAmount = Math.sin(time * 1.2) * 0.5; // 극단적으로 크게!
+          const floatingAmount = Math.sin(time * 1.2) * 0.1;
           hips.position.y = floatingAmount;
-          console.log("🎈 Hips 위치:", floatingAmount.toFixed(4));
         }
 
         // 숨쉬기(Scale): Chest나 Spine 뼈의 스케일을 미세하게 조정
@@ -439,7 +435,11 @@ export default function Avatar() {
           spine.rotation.x = breathingRotation;
           spine.rotation.y = idleSway;
           spine.quaternion.setFromEuler(spine.rotation);
-          console.log("🌀 Spine 회전:", breathingRotation.toFixed(4), idleSway.toFixed(4));
+          console.log(
+            "🌀 Spine 회전:",
+            breathingRotation.toFixed(4),
+            idleSway.toFixed(4)
+          );
         }
 
         // 머리 자연스러운 움직임
@@ -453,60 +453,52 @@ export default function Avatar() {
           console.log("👤 Head 회전:", headSway.toFixed(4), headNod.toFixed(4));
         }
 
-        // 팔 내리기(Rotation): 자연스러운 A-pose
+        // 팔 내리기(Rotation): -1.2 / +1.2로 확실하게 내림
         const leftUpperArm = vrm.humanoid.getNormalizedBoneNode("leftUpperArm");
         if (leftUpperArm) {
-          const targetRotation = -0.3;
-          const breathingSway = Math.sin(time * 1.5) * 0.3; // 극단적으로 크게!
-          const idleMotion = Math.sin(time * 0.6) * 0.2; // 극단적으로 크게!
+          const targetRotation = -1.2; // 약 70도 아래로
+          const breathingSway = Math.sin(time * 1.5) * 0.05; // 작은 진폭
 
           leftUpperArm.rotation.x = 0;
           leftUpperArm.rotation.y = 0;
           leftUpperArm.rotation.z = THREE.MathUtils.lerp(
             leftUpperArm.rotation.z,
-            targetRotation + breathingSway + idleMotion,
-            0.3
+            targetRotation + breathingSway,
+            0.1
           );
-          leftUpperArm.quaternion.setFromEuler(leftUpperArm.rotation);
-          console.log("💪 왼팔:", leftUpperArm.rotation.z.toFixed(4));
         }
 
         const rightUpperArm =
           vrm.humanoid.getNormalizedBoneNode("rightUpperArm");
         if (rightUpperArm) {
-          const targetRotation = 0.3;
-          const breathingSway = Math.sin(time * 1.5 + Math.PI) * 0.3; // 극단적으로 크게!
-          const idleMotion = Math.sin(time * 0.6 + Math.PI) * 0.2; // 극단적으로 크게!
+          const targetRotation = 1.2; // 약 70도 아래로
+          const breathingSway = Math.sin(time * 1.5 + Math.PI) * 0.05; // 작은 진폭
 
           rightUpperArm.rotation.x = 0;
           rightUpperArm.rotation.y = 0;
           rightUpperArm.rotation.z = THREE.MathUtils.lerp(
             rightUpperArm.rotation.z,
-            targetRotation + breathingSway + idleMotion,
-            0.3
+            targetRotation + breathingSway,
+            0.1
           );
-          rightUpperArm.quaternion.setFromEuler(rightUpperArm.rotation);
-          console.log("💪 오른팔:", rightUpperArm.rotation.z.toFixed(4));
         }
 
         // 팔꿈치 미세한 움직임
         const leftLowerArm = vrm.humanoid.getNormalizedBoneNode("leftLowerArm");
         if (leftLowerArm) {
-          const elbowBend = Math.sin(time * 1.5) * 0.5; // 극단적으로 크게!
+          const elbowBend = Math.sin(time * 1.5) * 0.08;
           leftLowerArm.rotation.x = 0;
           leftLowerArm.rotation.y = 0;
           leftLowerArm.rotation.z = elbowBend;
-          leftLowerArm.quaternion.setFromEuler(leftLowerArm.rotation);
         }
 
         const rightLowerArm =
           vrm.humanoid.getNormalizedBoneNode("rightLowerArm");
         if (rightLowerArm) {
-          const elbowBend = Math.sin(time * 1.5 + Math.PI) * 0.5; // 극단적으로 크게!
+          const elbowBend = Math.sin(time * 1.5 + Math.PI) * 0.08;
           rightLowerArm.rotation.x = 0;
           rightLowerArm.rotation.y = 0;
           rightLowerArm.rotation.z = -elbowBend;
-          rightLowerArm.quaternion.setFromEuler(rightLowerArm.rotation);
         }
       } catch (error) {
         console.warn("⚠️ Idle 애니메이션 중 오류:", error);
@@ -645,6 +637,9 @@ export default function Avatar() {
         // lookAt 업데이트 실패 시 무시
       }
     }
+
+    // ===== VRM 업데이트를 마지막에 호출 (물리/표정 반영) =====
+    vrm.update(delta);
   });
 
   return (
