@@ -456,6 +456,41 @@ export default function Avatar() {
     const time = state.clock.elapsedTime;
     const lerpSpeed = 3.0;
 
+    // 1. VRM 업데이트 (필수!)
+    vrm.update(delta);
+
+    // 2. 뼈 애니메이션: vrm.scene 직접 순회
+    if (vrm.scene) {
+      vrm.scene.traverse((object: any) => {
+        if (!object.name) return;
+
+        // 왼팔 내리기 (A-pose)
+        if (object.name === "leftUpperArm") {
+          object.rotation.x = 0.5;
+          object.rotation.y = 0.2;
+          object.rotation.z = -0.3;
+        }
+
+        // 오른팔 내리기 (A-pose)
+        if (object.name === "rightUpperArm") {
+          object.rotation.x = 0.5;
+          object.rotation.y = -0.2;
+          object.rotation.z = 0.3;
+        }
+
+        // 몸통 둥실거림
+        if (object.name === "hips") {
+          object.position.y = Math.sin(time * 1.2) * 0.03;
+        }
+
+        // 숨쉬기
+        if (object.name === "spine") {
+          const s = 1.0 + Math.sin(time * 1.5) * 0.02;
+          object.scale.set(s, s, s);
+        }
+      });
+    }
+
     // 3. 표정(BlendShape) 및 립싱크 로직
     // 오디오 볼륨 계산
     if (
@@ -540,8 +575,6 @@ export default function Avatar() {
       targetLookAtRef.current.lerp(mousePositionRef.current, 0.1);
       (vrm.lookAt as any).lookAtTarget = targetLookAtRef.current;
     }
-
-    // vrm.update()는 이미 맨 위에서 호출됨!
   });
 
   return (
