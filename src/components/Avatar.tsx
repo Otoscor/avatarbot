@@ -408,7 +408,7 @@ export default function Avatar() {
         // 둥실둥실(Position): Hips의 Y축 위치를 위아래로 천천히 둥실거리게
         const hips = vrm.humanoid.getNormalizedBoneNode("hips");
         if (hips) {
-          const floatingAmount = Math.sin(time * 1.2) * 0.08; // 0.05 → 0.08로 증가 (더 눈에 띄게)
+          const floatingAmount = Math.sin(time * 1.2) * 0.15; // 0.08 → 0.15로 대폭 증가
           hips.position.y = floatingAmount;
         }
 
