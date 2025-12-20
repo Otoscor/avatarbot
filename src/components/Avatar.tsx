@@ -425,11 +425,9 @@ export default function Avatar() {
         }
 
         if (chest) {
-          const breathingScale = 1.0 + Math.sin(time * 1.5) * 0.03; // 1.0 ~ 1.03
+          const breathingScale = 1.0 + Math.sin(time * 1.5) * 0.15; // 0.03 → 0.15로 대폭 증가!
           chest.scale.set(breathingScale, breathingScale, breathingScale);
           console.log("✅ 숨쉬기 스케일 적용:", breathingScale.toFixed(4));
-        } else {
-          console.warn("⚠️ Chest/Spine 뼈를 찾을 수 없음");
         }
 
         // 척추 미세 회전 (숨쉬기)
@@ -489,7 +487,7 @@ export default function Avatar() {
         // 팔꿈치 미세한 움직임
         const leftLowerArm = vrm.humanoid.getNormalizedBoneNode("leftLowerArm");
         if (leftLowerArm) {
-          const elbowBend = Math.sin(time * 1.5) * 0.05;
+          const elbowBend = Math.sin(time * 1.5) * 0.2; // 0.05 → 0.2로 대폭 증가!
           leftLowerArm.rotation.x = 0;
           leftLowerArm.rotation.y = 0;
           leftLowerArm.rotation.z = elbowBend;
@@ -499,7 +497,7 @@ export default function Avatar() {
         const rightLowerArm =
           vrm.humanoid.getNormalizedBoneNode("rightLowerArm");
         if (rightLowerArm) {
-          const elbowBend = Math.sin(time * 1.5 + Math.PI) * 0.05;
+          const elbowBend = Math.sin(time * 1.5 + Math.PI) * 0.2; // 0.05 → 0.2로 대폭 증가!
           rightLowerArm.rotation.x = 0;
           rightLowerArm.rotation.y = 0;
           rightLowerArm.rotation.z = -elbowBend;
