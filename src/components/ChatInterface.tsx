@@ -894,6 +894,9 @@ export default function ChatInterface() {
       if (messageDisplayTimerRef.current) {
         clearTimeout(messageDisplayTimerRef.current);
       }
+      if (speechSilenceTimerRef.current) {
+        clearTimeout(speechSilenceTimerRef.current);
+      }
     };
   }, []);
 
