@@ -180,7 +180,7 @@ export default function Avatar() {
       // 잔망 루피는 더 위로 올림
       const yPosition = selectedCharacter === "jinyoung" ? -0.5 : -1.2;
       gltf.scene.position.set(0, yPosition, 0); // 하단 중앙에 배치
-      gltf.scene.rotation.y = Math.PI; // z축 기준 180도 회전 (y축 회전으로 앞면이 보이도록)
+      gltf.scene.rotation.y = 0; // 정면을 향하도록 회전 제거
       // 캐릭터 크기 조정 (전신이 잘 보이도록)
       gltf.scene.scale.set(1, 1, 1);
       groupRef.current.add(gltf.scene);
