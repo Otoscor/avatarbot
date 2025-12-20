@@ -427,6 +427,114 @@ export default function ChatInterface() {
         });
         // 중간 결과는 최종 결과에 포함되므로 초기화
         setInterimTranscript("");
+        
+        // 최종 결과가 나왔으므로 침묵 타이머 시작
+        if (speechSilenceTimerRef.current) {
+          clearTimeout(speechSilenceTimerRef.current);
+        }
+        
+        // 1.5초 후 자동 전송
+        speechSilenceTimerRef.current = setTimeout(() => {
+          setCurrentSpeechText((currentText) => {
+            const messageText = currentText.trim();
+
+            if (messageText && !isLoadingRef.current) {
+              console.log("최종 결과 침묵 감지 - 메시지 전송:", messageText);
+
+              // 상태 초기화
+              setCurrentSpeechText("");
+              setListeningState("processing");
+
+              // 사용자 메시지 추가
+              addMessage({
+                role: "user",
+                content: messageText,
+              });
+
+              // 로딩 시작
+              setLoading(true);
+
+              // API 호출
+              fetch("/api/chat", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  messages: [
+                    ...messages.map((msg) => ({
+                      role: msg.role,
+                      content: msg.content,
+                    })),
+                    {
+                      role: "user" as const,
+                      content: messageText,
+                    },
+                  ],
+                }),
+              })
+                .then((res) => {
+                  if (!res.ok) {
+                    throw new Error("API 호출 실패");
+                  }
+                  return res.json();
+                })
+                .then((data) => {
+                  console.log("API 응답 받음:", data);
+
+                  // 응답의 text를 채팅창에 추가
+                  if (data.text) {
+                    addMessage({
+                      role: "assistant",
+                      content: data.text,
+                    });
+
+                    // 답변 표시 시작
+                    setShowMessage(true);
+
+                    // 기존 타이머 정리
+                    if (messageDisplayTimerRef.current) {
+                      clearTimeout(messageDisplayTimerRef.current);
+                    }
+
+                    // 5초 후 답변 숨김
+                    messageDisplayTimerRef.current = setTimeout(() => {
+                      setShowMessage(false);
+                    }, 5000);
+                  }
+
+                  // emotion 상태 업데이트
+                  if (data.emotion) {
+                    setEmotion(data.emotion);
+                  }
+
+                  // audio 상태 업데이트
+                  if (data.audio) {
+                    console.log(
+                      "오디오 데이터 설정:",
+                      data.audio.length > 0 ? "있음" : "없음"
+                    );
+                    setAudio(data.audio);
+                  } else {
+                    console.log("오디오 데이터 없음");
+                    setAudio(null);
+                  }
+
+                  setLoading(false);
+                })
+                .catch((error) => {
+                  console.error("채팅 오류:", error);
+                  addMessage({
+                    content: "죄송해요, 오류가 발생했어요. 다시 시도해주세요!",
+                    role: "assistant",
+                  });
+                  setLoading(false);
+                });
+            }
+
+            return ""; // 상태 초기화
+          });
+        }, 1500); // 1.5초 침묵 감지
       }
 
       // 중간 결과가 있으면 실시간으로 표시
