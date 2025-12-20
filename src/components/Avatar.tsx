@@ -16,6 +16,7 @@ export default function Avatar() {
   const currentEmotion = useChatStore((state) => state.currentEmotion);
   const currentAudio = useChatStore((state) => state.currentAudio);
   const setAudioPlaying = useChatStore((state) => state.setAudioPlaying);
+  const selectedCharacter = useChatStore((state) => state.selectedCharacter);
   const targetEmotionRef = useRef<Emotion>("neutral");
   const blendShapeWeightsRef = useRef<Record<string, number>>({});
 
@@ -266,14 +267,17 @@ export default function Avatar() {
 
     // AudioContext 생성 (이미 활성화된 컨텍스트가 있으면 재사용)
     let audioContext: AudioContext;
-    
+
     // ChatInterface에서 활성화한 컨텍스트가 있는지 확인
     // 없으면 새로 생성
-    if (!audioContextRef.current || audioContextRef.current.state === "closed") {
+    if (
+      !audioContextRef.current ||
+      audioContextRef.current.state === "closed"
+    ) {
       audioContext = new (window.AudioContext ||
         (window as any).webkitAudioContext)();
       audioContextRef.current = audioContext;
-      
+
       // 컨텍스트가 suspended 상태면 활성화 시도
       if (audioContext.state === "suspended") {
         audioContext.resume().catch((error) => {

@@ -84,7 +84,6 @@ export default function ChatInterface() {
     useState(false); // 오디오 자동 재생 허용 모달
   const [audioContextUnlocked, setAudioContextUnlocked] = useState(false); // 오디오 컨텍스트 활성화 여부
   const [showCharacterModal, setShowCharacterModal] = useState(false); // 캐릭터 선택 모달
-  const [selectedCharacter, setSelectedCharacter] = useState("test"); // 선택된 캐릭터 ("test" 또는 "jinyoung")
   const permissionDeniedRef = useRef<boolean>(false); // 권한 거부 ref (재시도 방지용)
   const audioContextRef = useRef<AudioContext | null>(null); // 오디오 컨텍스트 ref
   const speechSilenceTimerRef = useRef<NodeJS.Timeout | null>(null); // 음성 침묵 감지 타이머
@@ -92,10 +91,12 @@ export default function ChatInterface() {
     messages,
     isLoading,
     isAudioPlaying,
+    selectedCharacter,
     addMessage,
     setLoading,
     setEmotion,
     setAudio,
+    setSelectedCharacter,
   } = useChatStore();
 
   // 현재 표시할 메시지 (가장 최근 assistant 메시지)
