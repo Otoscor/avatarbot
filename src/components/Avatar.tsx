@@ -46,7 +46,7 @@ export default function Avatar() {
   // VRM 모델 로드 (캐릭터 선택에 따라 다른 파일 로드)
   useEffect(() => {
     console.log("=== VRM 모델 로드 시작 ===");
-    
+
     // 기존 모델 정리
     if (gltf && groupRef.current) {
       groupRef.current.remove(gltf.scene);
@@ -74,20 +74,23 @@ export default function Avatar() {
         console.log("VRM 로드 성공!");
         setGltf(loadedGltf);
         const vrmData = loadedGltf.userData.vrm as VRM;
-        
+
         if (vrmData) {
           setVrm(vrmData);
-          
+
           // ===== 1단계: 디버깅 로그 추가 (필수) =====
           console.log("=== VRM 뼈대 구조 점검 ===");
           if (vrmData.humanoid) {
             const hips = vrmData.humanoid.getNormalizedBoneNode("hips");
             const spine = vrmData.humanoid.getNormalizedBoneNode("spine");
             const head = vrmData.humanoid.getNormalizedBoneNode("head");
-            const leftUpperArm = vrmData.humanoid.getNormalizedBoneNode("leftUpperArm");
-            const rightUpperArm = vrmData.humanoid.getNormalizedBoneNode("rightUpperArm");
+            const leftUpperArm =
+              vrmData.humanoid.getNormalizedBoneNode("leftUpperArm");
+            const rightUpperArm =
+              vrmData.humanoid.getNormalizedBoneNode("rightUpperArm");
             const chest = vrmData.humanoid.getNormalizedBoneNode("chest");
-            const upperChest = vrmData.humanoid.getNormalizedBoneNode("upperChest");
+            const upperChest =
+              vrmData.humanoid.getNormalizedBoneNode("upperChest");
 
             console.log("Hips 존재:", !!hips, hips);
             console.log("Spine 존재:", !!spine, spine);
@@ -100,8 +103,10 @@ export default function Avatar() {
             if (!hips) console.warn("⚠️ Hips 뼈를 찾을 수 없습니다!");
             if (!spine) console.warn("⚠️ Spine 뼈를 찾을 수 없습니다!");
             if (!head) console.warn("⚠️ Head 뼈를 찾을 수 없습니다!");
-            if (!leftUpperArm) console.warn("⚠️ LeftUpperArm 뼈를 찾을 수 없습니다!");
-            if (!rightUpperArm) console.warn("⚠️ RightUpperArm 뼈를 찾을 수 없습니다!");
+            if (!leftUpperArm)
+              console.warn("⚠️ LeftUpperArm 뼈를 찾을 수 없습니다!");
+            if (!rightUpperArm)
+              console.warn("⚠️ RightUpperArm 뼈를 찾을 수 없습니다!");
           } else {
             console.error("❌ VRM Humanoid가 없습니다!");
           }
@@ -116,10 +121,13 @@ export default function Avatar() {
               const expNameLower = expression.expressionName.toLowerCase();
               if (expNameLower.includes("blink")) {
                 initialWeights[expression.expressionName] = 0;
-                vrmData.expressionManager?.setValue(expression.expressionName, 0);
+                vrmData.expressionManager?.setValue(
+                  expression.expressionName,
+                  0
+                );
               }
             });
-            
+
             console.log(
               "사용 가능한 BlendShape:",
               vrmData.expressionManager.expressions.map((e) => e.expressionName)
@@ -138,7 +146,7 @@ export default function Avatar() {
           } else {
             console.warn("⚠️ lookAt 기능을 사용할 수 없습니다");
           }
-          
+
           vrmInitializedRef.current = true;
           console.log("=== VRM 초기화 완료 ===");
         }
@@ -164,7 +172,7 @@ export default function Avatar() {
       gltf.scene.rotation.y = 0; // 정면을 향하도록
       gltf.scene.scale.set(1, 1, 1);
       groupRef.current.add(gltf.scene);
-      
+
       console.log("✅ VRM 씬이 그룹에 추가됨");
     }
   }, [gltf, selectedCharacter]);
@@ -381,7 +389,20 @@ export default function Avatar() {
 
   // ===== 2단계: VRM 업데이트 루프 점검 + 3단계: 2등신 캐릭터 맞춤형 Idle 모션 =====
   useFrame((state, delta) => {
-    if (!vrm || !vrm.expressionManager || !vrmInitializedRef.current) return;
+    // 디버깅: useFrame 진입 확인
+    if (!vrm) {
+      return;
+    }
+    
+    if (!vrm.expressionManager) {
+      console.warn("⚠️ expressionManager 없음");
+      return;
+    }
+    
+    if (!vrmInitializedRef.current) {
+      console.warn("⚠️ VRM 초기화되지 않음");
+      return;
+    }
 
     // ===== 2단계: VRM 업데이트를 가장 먼저 호출 =====
     vrm.update(delta);
@@ -394,7 +415,7 @@ export default function Avatar() {
     if (vrm.humanoid) {
       try {
         // ===== 4단계: 방어 코드 (뼈가 null일 경우 대비) =====
-        
+
         // 둥실둥실(Position): Hips의 Y축 위치를 위아래로 천천히 둥실거리게
         const hips = vrm.humanoid.getNormalizedBoneNode("hips");
         if (hips) {
@@ -403,8 +424,9 @@ export default function Avatar() {
         }
 
         // 숨쉬기(Scale): Chest나 Spine 뼈의 스케일을 미세하게 조정
-        const chest = vrm.humanoid.getNormalizedBoneNode("chest") || 
-                      vrm.humanoid.getNormalizedBoneNode("upperChest");
+        const chest =
+          vrm.humanoid.getNormalizedBoneNode("chest") ||
+          vrm.humanoid.getNormalizedBoneNode("upperChest");
         if (chest) {
           const breathingScale = 1.0 + Math.sin(time * 1.5) * 0.03; // 1.0 ~ 1.03
           chest.scale.set(breathingScale, breathingScale, breathingScale);
@@ -436,7 +458,7 @@ export default function Avatar() {
           const targetRotation = -1.2; // Z축 -1.2
           const breathingSway = Math.sin(time * 1.5) * 0.05;
           const idleMotion = Math.sin(time * 0.6) * 0.03;
-          
+
           leftUpperArm.rotation.x = 0;
           leftUpperArm.rotation.y = 0;
           leftUpperArm.rotation.z = THREE.MathUtils.lerp(
@@ -447,12 +469,13 @@ export default function Avatar() {
           leftUpperArm.quaternion.setFromEuler(leftUpperArm.rotation);
         }
 
-        const rightUpperArm = vrm.humanoid.getNormalizedBoneNode("rightUpperArm");
+        const rightUpperArm =
+          vrm.humanoid.getNormalizedBoneNode("rightUpperArm");
         if (rightUpperArm) {
           const targetRotation = 1.2; // Z축 +1.2
           const breathingSway = Math.sin(time * 1.5 + Math.PI) * 0.05;
           const idleMotion = Math.sin(time * 0.6 + Math.PI) * 0.03;
-          
+
           rightUpperArm.rotation.x = 0;
           rightUpperArm.rotation.y = 0;
           rightUpperArm.rotation.z = THREE.MathUtils.lerp(
@@ -473,7 +496,8 @@ export default function Avatar() {
           leftLowerArm.quaternion.setFromEuler(leftLowerArm.rotation);
         }
 
-        const rightLowerArm = vrm.humanoid.getNormalizedBoneNode("rightLowerArm");
+        const rightLowerArm =
+          vrm.humanoid.getNormalizedBoneNode("rightLowerArm");
         if (rightLowerArm) {
           const elbowBend = Math.sin(time * 1.5 + Math.PI) * 0.05;
           rightLowerArm.rotation.x = 0;
