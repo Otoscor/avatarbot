@@ -162,7 +162,7 @@ export default function Avatar() {
 
       // VRM 모델의 위치 및 회전 조정 (캐릭터별로 다른 위치 설정)
       // 잔망 루피는 더 위로 올림
-      const yPosition = selectedCharacter === "jinyoung" ? -0.8 : -1.2;
+      const yPosition = selectedCharacter === "jinyoung" ? -0.5 : -1.2;
       gltf.scene.position.set(0, yPosition, 0); // 하단 중앙에 배치
       gltf.scene.rotation.y = Math.PI; // z축 기준 180도 회전 (y축 회전으로 앞면이 보이도록)
       // 캐릭터 크기 조정 (전신이 잘 보이도록)
