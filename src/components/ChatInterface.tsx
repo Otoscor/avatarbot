@@ -427,6 +427,12 @@ export default function ChatInterface() {
       // 중간 결과가 있으면 실시간으로 표시
       if (interimTranscript) {
         console.log("중간 결과 (실시간):", interimTranscript);
+        console.log("현재 상태:", {
+          interimTranscript,
+          currentSpeechText,
+          listeningState,
+          isListening: isListeningRef.current,
+        });
         setInterimTranscript(interimTranscript);
         setListeningState("speaking");
         
