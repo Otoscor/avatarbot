@@ -412,101 +412,233 @@ export default function ChatInterface() {
         }
       }
 
-      // 최종 결과가 있으면 바로 전송 (입력창에 표시하지 않음)
+      // 최종 결과가 있으면 현재 수집 중인 텍스트에 누적
       if (finalTranscript) {
-        const messageText = finalTranscript.trim();
-        console.log("최종 결과 - 바로 전송:", messageText);
-
-        // 중간 결과 초기화
+        const finalText = finalTranscript.trim();
+        setCurrentSpeechText((prev) => {
+          const newText = (prev + " " + finalText).trim();
+          console.log("최종 결과 추가, 전체 텍스트:", newText);
+          return newText;
+        });
+        // 중간 결과는 최종 결과에 포함되므로 초기화
         setInterimTranscript("");
-
-        if (messageText && !isLoading) {
-          // 사용자 메시지 추가
-          addMessage({
-            role: "user",
-            content: messageText,
-          });
-
-          // 로딩 시작
-          setLoading(true);
-          setListeningState("processing");
-
-          // 최신 messages 상태를 가져오기 위해 함수형 업데이트 사용
-          fetch("/api/chat", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify({
-              messages: [
-                ...messages.map((msg) => ({
-                  role: msg.role,
-                  content: msg.content,
-                })),
-                {
-                  role: "user" as const,
-                  content: messageText,
-                },
-              ],
-            }),
-          })
-            .then((res) => {
-              if (!res.ok) {
-                throw new Error("API 호출 실패");
-              }
-              return res.json();
-            })
-            .then((data) => {
-              console.log("API 응답 받음:", data);
-
-              // 응답의 text를 채팅창에 추가
-              if (data.text) {
-                addMessage({
-                  role: "assistant",
-                  content: data.text,
-                });
-
-                // 답변 표시 시작
-                setShowMessage(true);
-
-                // 기존 타이머 정리
-                if (messageDisplayTimerRef.current) {
-                  clearTimeout(messageDisplayTimerRef.current);
-                }
-
-                // 5초 후 답변 숨김
-                messageDisplayTimerRef.current = setTimeout(() => {
-                  setShowMessage(false);
-                }, 5000);
-              }
-
-              // emotion 상태 업데이트
-              if (data.emotion) {
-                setEmotion(data.emotion);
-              }
-
-              // audio 상태 업데이트
-              if (data.audio) {
-                setAudio(data.audio);
-              }
-
-              setLoading(false);
-            })
-            .catch((error) => {
-              console.error("채팅 오류:", error);
-              setLoading(false);
-            });
-        }
       }
 
-      // 중간 결과가 있으면 "말하는 중" 상태로 변경 및 자막에 표시
-      if (interimTranscript && !finalTranscript) {
-        console.log("중간 결과:", interimTranscript);
+      // 중간 결과가 있으면 실시간으로 표시
+      if (interimTranscript) {
+        console.log("중간 결과 (실시간):", interimTranscript);
         setInterimTranscript(interimTranscript);
         setListeningState("speaking");
-      } else if (!interimTranscript && !finalTranscript) {
-        // 중간 결과가 없으면 초기화
+        
+        // 침묵 타이머 리셋 (새로운 음성 입력이 있으므로)
+        if (speechSilenceTimerRef.current) {
+          clearTimeout(speechSilenceTimerRef.current);
+        }
+        
+        // 1.5초 동안 새로운 입력이 없으면 전송
+        speechSilenceTimerRef.current = setTimeout(() => {
+          setCurrentSpeechText((currentText) => {
+            const messageText = (currentText + " " + interimTranscript).trim();
+            
+            if (messageText && !isLoadingRef.current) {
+              console.log("침묵 감지 - 메시지 전송:", messageText);
+              
+              // 상태 초기화
+              setInterimTranscript("");
+              setCurrentSpeechText("");
+              setListeningState("processing");
+              
+              // 사용자 메시지 추가
+              addMessage({
+                role: "user",
+                content: messageText,
+              });
+
+              // 로딩 시작
+              setLoading(true);
+
+              // 최신 messages 상태를 가져오기 위해 함수형 업데이트 사용
+              fetch("/api/chat", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  messages: [
+                    ...messages.map((msg) => ({
+                      role: msg.role,
+                      content: msg.content,
+                    })),
+                    {
+                      role: "user" as const,
+                      content: messageText,
+                    },
+                  ],
+                }),
+              })
+                .then((res) => {
+                  if (!res.ok) {
+                    throw new Error("API 호출 실패");
+                  }
+                  return res.json();
+                })
+                .then((data) => {
+                  console.log("API 응답 받음:", data);
+
+                  // 응답의 text를 채팅창에 추가
+                  if (data.text) {
+                    addMessage({
+                      role: "assistant",
+                      content: data.text,
+                    });
+
+                    // 답변 표시 시작
+                    setShowMessage(true);
+
+                    // 기존 타이머 정리
+                    if (messageDisplayTimerRef.current) {
+                      clearTimeout(messageDisplayTimerRef.current);
+                    }
+
+                    // 5초 후 답변 숨김
+                    messageDisplayTimerRef.current = setTimeout(() => {
+                      setShowMessage(false);
+                    }, 5000);
+                  }
+
+                  // emotion 상태 업데이트
+                  if (data.emotion) {
+                    setEmotion(data.emotion);
+                  }
+
+                  // audio 상태 업데이트
+                  if (data.audio) {
+                    console.log("오디오 데이터 설정:", data.audio.length > 0 ? "있음" : "없음");
+                    setAudio(data.audio);
+                  } else {
+                    console.log("오디오 데이터 없음");
+                    setAudio(null);
+                  }
+
+                  setLoading(false);
+                })
+                .catch((error) => {
+                  console.error("채팅 오류:", error);
+                  addMessage({
+                    content: "죄송해요, 오류가 발생했어요. 다시 시도해주세요!",
+                    role: "assistant",
+                  });
+                  setLoading(false);
+                });
+            }
+            
+            return ""; // 상태 초기화
+          });
+        }, 1500);
+      } else if (!interimTranscript && currentSpeechText) {
+        // 중간 결과가 없고, 수집된 텍스트가 있으면 침묵 타이머 시작
+        if (speechSilenceTimerRef.current) {
+          clearTimeout(speechSilenceTimerRef.current);
+        }
+        
+        speechSilenceTimerRef.current = setTimeout(() => {
+          setCurrentSpeechText((currentText) => {
+            const messageText = currentText.trim();
+            
+            if (messageText && !isLoadingRef.current) {
+              console.log("침묵 감지 (최종 결과만) - 메시지 전송:", messageText);
+              
+              // 상태 초기화
+              setCurrentSpeechText("");
+              setListeningState("processing");
+              
+              // 사용자 메시지 추가
+              addMessage({
+                role: "user",
+                content: messageText,
+              });
+
+              // 로딩 시작
+              setLoading(true);
+
+              // API 호출
+              fetch("/api/chat", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  messages: [
+                    ...messages.map((msg) => ({
+                      role: msg.role,
+                      content: msg.content,
+                    })),
+                    {
+                      role: "user" as const,
+                      content: messageText,
+                    },
+                  ],
+                }),
+              })
+                .then((res) => {
+                  if (!res.ok) {
+                    throw new Error("API 호출 실패");
+                  }
+                  return res.json();
+                })
+                .then((data) => {
+                  console.log("API 응답 받음:", data);
+
+                  if (data.text) {
+                    addMessage({
+                      role: "assistant",
+                      content: data.text,
+                    });
+
+                    setShowMessage(true);
+
+                    if (messageDisplayTimerRef.current) {
+                      clearTimeout(messageDisplayTimerRef.current);
+                    }
+
+                    messageDisplayTimerRef.current = setTimeout(() => {
+                      setShowMessage(false);
+                    }, 5000);
+                  }
+
+                  if (data.emotion) {
+                    setEmotion(data.emotion);
+                  }
+
+                  if (data.audio) {
+                    console.log("오디오 데이터 설정:", data.audio.length > 0 ? "있음" : "없음");
+                    setAudio(data.audio);
+                  } else {
+                    console.log("오디오 데이터 없음");
+                    setAudio(null);
+                  }
+
+                  setLoading(false);
+                })
+                .catch((error) => {
+                  console.error("채팅 오류:", error);
+                  addMessage({
+                    content: "죄송해요, 오류가 발생했어요. 다시 시도해주세요!",
+                    role: "assistant",
+                  });
+                  setLoading(false);
+                });
+            }
+            
+            return ""; // 상태 초기화
+          });
+        }, 1500);
+      } else if (!interimTranscript && !currentSpeechText) {
+        // 아무 결과도 없으면 다시 듣는 중 상태로
         setInterimTranscript("");
+        if (isListeningRef.current) {
+          setListeningState("listening");
+        }
       }
     };
 
