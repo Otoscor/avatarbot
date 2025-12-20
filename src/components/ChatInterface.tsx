@@ -1143,7 +1143,7 @@ export default function ChatInterface() {
                     )}
                     {/* 캐릭터 프리뷰 (테스트) */}
                     <Image
-                      src="/TestThumbnail.jpg"
+                      src="/TestThumnbnail.jpg"
                       alt="테스트"
                       fill
                       style={{
