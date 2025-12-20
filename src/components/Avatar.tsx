@@ -236,32 +236,7 @@ export default function Avatar() {
       console.log("✅ VRM 씬이 그룹에 추가됨");
 
       // 🔍 1단계: Skeleton 시각화 및 본 이름 전체 출력
-      console.log("=== 🦴 SKELETON 진단 시작 ===");
-
-      // 모든 Object3D 순회하면서 본 찾기
-      const bones: any[] = [];
-      gltf.scene.traverse((object: any) => {
-        if (object.isBone || object.type === "Bone") {
-          bones.push(object);
-          console.log(`🦴 본 발견: ${object.name} (type: ${object.type})`);
-        }
-      });
-
-      console.log(`✅ 총 ${bones.length}개의 본 발견`);
-
-      // SkeletonHelper 추가 (뼈대를 눈으로 확인)
-      if (bones.length > 0) {
-        const skeletonHelper = new THREE.SkeletonHelper(gltf.scene);
-        skeletonHelper.visible = true;
-        groupRef.current.add(skeletonHelper);
-        console.log(
-          "✅ SkeletonHelper 추가됨 (뼈대가 빨간 선으로 보일 겁니다)"
-        );
-      } else {
-        console.warn("⚠️ 본이 하나도 없습니다!");
-      }
-
-      console.log("=== 🦴 SKELETON 진단 완료 ===");
+      // SkeletonHelper 제거됨 (이상한 선 제거)
     }
   }, [gltf, selectedCharacter]);
 
@@ -494,17 +469,21 @@ export default function Avatar() {
       vrm.scene.traverse((object: any) => {
         if (!object.name) return;
 
-        // 왼팔 내리기 (A-pose) - 극단적으로!
+        // 왼팔 내리기 (A-pose) - Normalized 제외!
         if (
-          object.name.toLowerCase().includes("leftupperarm") ||
+          (object.name.toLowerCase().includes("leftupperarm") ||
           object.name.toLowerCase().includes("left_upperarm") ||
-          object.name === "leftUpperArm"
+          object.name === "leftUpperArm") &&
+          !object.name.includes("Normalized")
         ) {
           leftArmFound = true;
           const beforeZ = object.rotation.z;
           object.rotation.x = 0.5;
           object.rotation.y = 0;
           object.rotation.z = -1.5; // 확실하게 아래로!
+          
+          // 강제로 매트릭스 업데이트
+          object.updateMatrixWorld(true);
 
           // 2초마다 로그
           if (Math.floor(time) % 2 === 0 && time - Math.floor(time) < delta) {
@@ -516,17 +495,21 @@ export default function Avatar() {
           }
         }
 
-        // 오른팔 내리기 (A-pose) - 극단적으로!
+        // 오른팔 내리기 (A-pose) - Normalized 제외!
         if (
-          object.name.toLowerCase().includes("rightupperarm") ||
+          (object.name.toLowerCase().includes("rightupperarm") ||
           object.name.toLowerCase().includes("right_upperarm") ||
-          object.name === "rightUpperArm"
+          object.name === "rightUpperArm") &&
+          !object.name.includes("Normalized")
         ) {
           rightArmFound = true;
           const beforeZ = object.rotation.z;
           object.rotation.x = 0.5;
           object.rotation.y = 0;
           object.rotation.z = 1.5; // 확실하게 아래로!
+          
+          // 강제로 매트릭스 업데이트
+          object.updateMatrixWorld(true);
 
           if (Math.floor(time) % 2 === 0 && time - Math.floor(time) < delta) {
             console.log(
@@ -653,9 +636,11 @@ export default function Avatar() {
       (vrm.lookAt as any).lookAtTarget = targetLookAtRef.current;
     }
 
-    // 2. VRM 업데이트 (맨 마지막에!)
-    // 이렇게 해야 위에서 설정한 본 rotation이 덮어써지지 않습니다
-    vrm.update(delta);
+    // 2. 표정만 수동 업데이트 (vrm.update() 제거!)
+    // vrm.update()가 본 rotation을 계속 리셋하므로 제거하고 표정만 수동 업데이트
+    if (vrm.expressionManager) {
+      vrm.expressionManager.update();
+    }
   });
 
   return (
