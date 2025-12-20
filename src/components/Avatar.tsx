@@ -110,9 +110,8 @@ export default function Avatar() {
     loader.register((parser) => new VRMLoaderPlugin(parser));
 
     // 선택된 캐릭터에 따라 다른 VRM 파일 로드
-    const vrmPath = selectedCharacter === "jinyoung" 
-      ? "/zanmangloopy.vrm" 
-      : "/test.vrm";
+    const vrmPath =
+      selectedCharacter === "jinyoung" ? "/zanmangloopy.vrm" : "/test.vrm";
 
     console.log("VRM 모델 로드 시작:", vrmPath);
 
@@ -128,7 +127,16 @@ export default function Avatar() {
           const initialWeights: Record<string, number> = {};
           if (vrmData.expressionManager) {
             vrmData.expressionManager.expressions.forEach((expression) => {
+              // 기본값은 0으로 설정
               initialWeights[expression.expressionName] = 0;
+              
+              // 눈 관련 BlendShape는 초기값을 명시적으로 0으로 설정 (눈 뜨기)
+              const expNameLower = expression.expressionName.toLowerCase();
+              if (expNameLower.includes("blink")) {
+                initialWeights[expression.expressionName] = 0;
+                // 초기화 시 expressionManager에도 반영
+                vrmData.expressionManager.setValue(expression.expressionName, 0);
+              }
             });
             // 사용 가능한 BlendShape 이름 로그 출력 (디버깅용)
             console.log(
@@ -137,6 +145,11 @@ export default function Avatar() {
             );
           }
           blendShapeWeightsRef.current = initialWeights;
+          
+          // 명시적으로 update 호출하여 초기 상태 반영
+          if (vrmData.expressionManager) {
+            vrmData.expressionManager.update();
+          }
 
           // lookAt 기능 확인
           if (vrmData.lookAt) {
