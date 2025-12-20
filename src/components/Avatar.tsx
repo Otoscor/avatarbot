@@ -135,7 +135,7 @@ export default function Avatar() {
               if (expNameLower.includes("blink")) {
                 initialWeights[expression.expressionName] = 0;
                 // 초기화 시 expressionManager에도 반영
-                vrmData.expressionManager.setValue(expression.expressionName, 0);
+                vrmData.expressionManager?.setValue(expression.expressionName, 0);
               }
             });
             // 사용 가능한 BlendShape 이름 로그 출력 (디버깅용)
