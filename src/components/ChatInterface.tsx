@@ -438,25 +438,25 @@ export default function ChatInterface() {
         });
         setInterimTranscript(interimTranscript);
         setListeningState("speaking");
-        
+
         // 침묵 타이머 리셋 (새로운 음성 입력이 있으므로)
         if (speechSilenceTimerRef.current) {
           clearTimeout(speechSilenceTimerRef.current);
         }
-        
+
         // 1.5초 동안 새로운 입력이 없으면 전송
         speechSilenceTimerRef.current = setTimeout(() => {
           setCurrentSpeechText((currentText) => {
             const messageText = (currentText + " " + interimTranscript).trim();
-            
+
             if (messageText && !isLoadingRef.current) {
               console.log("침묵 감지 - 메시지 전송:", messageText);
-              
+
               // 상태 초기화
               setInterimTranscript("");
               setCurrentSpeechText("");
               setListeningState("processing");
-              
+
               // 사용자 메시지 추가
               addMessage({
                 role: "user",
@@ -522,7 +522,10 @@ export default function ChatInterface() {
 
                   // audio 상태 업데이트
                   if (data.audio) {
-                    console.log("오디오 데이터 설정:", data.audio.length > 0 ? "있음" : "없음");
+                    console.log(
+                      "오디오 데이터 설정:",
+                      data.audio.length > 0 ? "있음" : "없음"
+                    );
                     setAudio(data.audio);
                   } else {
                     console.log("오디오 데이터 없음");
@@ -540,7 +543,7 @@ export default function ChatInterface() {
                   setLoading(false);
                 });
             }
-            
+
             return ""; // 상태 초기화
           });
         }, 1500);
@@ -549,18 +552,21 @@ export default function ChatInterface() {
         if (speechSilenceTimerRef.current) {
           clearTimeout(speechSilenceTimerRef.current);
         }
-        
+
         speechSilenceTimerRef.current = setTimeout(() => {
           setCurrentSpeechText((currentText) => {
             const messageText = currentText.trim();
-            
+
             if (messageText && !isLoadingRef.current) {
-              console.log("침묵 감지 (최종 결과만) - 메시지 전송:", messageText);
-              
+              console.log(
+                "침묵 감지 (최종 결과만) - 메시지 전송:",
+                messageText
+              );
+
               // 상태 초기화
               setCurrentSpeechText("");
               setListeningState("processing");
-              
+
               // 사용자 메시지 추가
               addMessage({
                 role: "user",
@@ -620,7 +626,10 @@ export default function ChatInterface() {
                   }
 
                   if (data.audio) {
-                    console.log("오디오 데이터 설정:", data.audio.length > 0 ? "있음" : "없음");
+                    console.log(
+                      "오디오 데이터 설정:",
+                      data.audio.length > 0 ? "있음" : "없음"
+                    );
                     setAudio(data.audio);
                   } else {
                     console.log("오디오 데이터 없음");
@@ -638,7 +647,7 @@ export default function ChatInterface() {
                   setLoading(false);
                 });
             }
-            
+
             return ""; // 상태 초기화
           });
         }, 1500);
@@ -957,7 +966,7 @@ export default function ChatInterface() {
             "linear-gradient(to top, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.2) 15%, transparent 20%)",
         }}
       />
-      
+
       {/* 우상단 캐릭터 선택 버튼 */}
       <div
         className="fixed top-0 right-0 z-20 pointer-events-auto"
@@ -995,7 +1004,7 @@ export default function ChatInterface() {
           />
         </button>
       </div>
-      
+
       {/* 캐릭터 선택 모달 */}
       {showCharacterModal && (
         <>
@@ -1007,7 +1016,7 @@ export default function ChatInterface() {
             }}
             onClick={() => setShowCharacterModal(false)}
           />
-          
+
           {/* 모달 */}
           <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
             <div
@@ -1038,7 +1047,8 @@ export default function ChatInterface() {
                 <h3
                   style={{
                     color: "#1D1D1D",
-                    fontFamily: '"Noto Sans KR", "Pretendard Variable", Pretendard, sans-serif',
+                    fontFamily:
+                      '"Noto Sans KR", "Pretendard Variable", Pretendard, sans-serif',
                     fontSize: "14px",
                     fontStyle: "normal",
                     fontWeight: 500,
@@ -1049,7 +1059,7 @@ export default function ChatInterface() {
                 >
                   캐릭터 선택창
                 </h3>
-                
+
                 {/* 오른쪽 X 버튼 */}
                 <button
                   style={{
@@ -1071,7 +1081,7 @@ export default function ChatInterface() {
                   <X size={16} color="#1D1D1D" />
                 </button>
               </div>
-              
+
               {/* 캐릭터 선택 컨테이너 */}
               <div
                 style={{
@@ -1103,9 +1113,10 @@ export default function ChatInterface() {
                       justifyContent: "center",
                       alignSelf: "stretch",
                       borderRadius: "16px",
-                      border: selectedCharacter === "test" 
-                        ? "1px solid #5A35EC" 
-                        : "1px solid #EEE",
+                      border:
+                        selectedCharacter === "test"
+                          ? "1px solid #5A35EC"
+                          : "1px solid #EEE",
                       background: "#FAFAFA",
                       position: "relative",
                     }}
@@ -1145,7 +1156,8 @@ export default function ChatInterface() {
                         style={{
                           color: "#999",
                           fontSize: "12px",
-                          fontFamily: '"Pretendard Variable", Pretendard, sans-serif',
+                          fontFamily:
+                            '"Pretendard Variable", Pretendard, sans-serif',
                         }}
                       >
                         테스트
@@ -1157,7 +1169,8 @@ export default function ChatInterface() {
                       alignSelf: "stretch",
                       color: "#1D1D1D",
                       textAlign: "center",
-                      fontFamily: '"Noto Sans KR", "Pretendard Variable", Pretendard, sans-serif',
+                      fontFamily:
+                        '"Noto Sans KR", "Pretendard Variable", Pretendard, sans-serif',
                       fontSize: "13px",
                       fontStyle: "normal",
                       fontWeight: 500,
@@ -1168,7 +1181,7 @@ export default function ChatInterface() {
                     테스트
                   </div>
                 </div>
-                
+
                 {/* 진영 루띠 캐릭터 */}
                 <div
                   style={{
@@ -1191,9 +1204,10 @@ export default function ChatInterface() {
                       justifyContent: "center",
                       alignSelf: "stretch",
                       borderRadius: "16px",
-                      border: selectedCharacter === "jinyoung" 
-                        ? "1px solid #5A35EC" 
-                        : "1px solid #EEE",
+                      border:
+                        selectedCharacter === "jinyoung"
+                          ? "1px solid #5A35EC"
+                          : "1px solid #EEE",
                       background: "#FAFAFA",
                       position: "relative",
                     }}
@@ -1242,7 +1256,8 @@ export default function ChatInterface() {
                       alignSelf: "stretch",
                       color: "#1D1D1D",
                       textAlign: "center",
-                      fontFamily: '"Noto Sans KR", "Pretendard Variable", Pretendard, sans-serif',
+                      fontFamily:
+                        '"Noto Sans KR", "Pretendard Variable", Pretendard, sans-serif',
                       fontSize: "13px",
                       fontStyle: "normal",
                       fontWeight: 500,
