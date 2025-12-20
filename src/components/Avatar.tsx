@@ -129,13 +129,16 @@ export default function Avatar() {
             vrmData.expressionManager.expressions.forEach((expression) => {
               // 기본값은 0으로 설정
               initialWeights[expression.expressionName] = 0;
-              
+
               // 눈 관련 BlendShape는 초기값을 명시적으로 0으로 설정 (눈 뜨기)
               const expNameLower = expression.expressionName.toLowerCase();
               if (expNameLower.includes("blink")) {
                 initialWeights[expression.expressionName] = 0;
                 // 초기화 시 expressionManager에도 반영
-                vrmData.expressionManager?.setValue(expression.expressionName, 0);
+                vrmData.expressionManager?.setValue(
+                  expression.expressionName,
+                  0
+                );
               }
             });
             // 사용 가능한 BlendShape 이름 로그 출력 (디버깅용)
@@ -145,7 +148,7 @@ export default function Avatar() {
             );
           }
           blendShapeWeightsRef.current = initialWeights;
-          
+
           // 명시적으로 update 호출하여 초기 상태 반영
           if (vrmData.expressionManager) {
             vrmData.expressionManager.update();

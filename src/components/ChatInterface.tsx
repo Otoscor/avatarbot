@@ -84,6 +84,7 @@ export default function ChatInterface() {
     useState(false); // 오디오 자동 재생 허용 모달
   const [audioContextUnlocked, setAudioContextUnlocked] = useState(false); // 오디오 컨텍스트 활성화 여부
   const [showCharacterModal, setShowCharacterModal] = useState(false); // 캐릭터 선택 모달
+  const [showComingSoonToast, setShowComingSoonToast] = useState(false); // 준비 중 토스트
   const permissionDeniedRef = useRef<boolean>(false); // 권한 거부 ref (재시도 방지용)
   const audioContextRef = useRef<AudioContext | null>(null); // 오디오 컨텍스트 ref
   const speechSilenceTimerRef = useRef<NodeJS.Timeout | null>(null); // 음성 침묵 감지 타이머
@@ -1092,90 +1093,7 @@ export default function ChatInterface() {
                   flex: 1,
                 }}
               >
-                {/* 테스트 캐릭터 */}
-                <div
-                  style={{
-                    display: "flex",
-                    width: "140px",
-                    flexDirection: "column",
-                    alignItems: "center",
-                    gap: "8px",
-                    cursor: "pointer",
-                  }}
-                  onClick={() => {
-                    setSelectedCharacter("test");
-                    setShowCharacterModal(false);
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      height: "172px",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      alignSelf: "stretch",
-                      borderRadius: "16px",
-                      border:
-                        selectedCharacter === "test"
-                          ? "1px solid #5A35EC"
-                          : "1px solid #EEE",
-                      background: "#FAFAFA",
-                      position: "relative",
-                      overflow: "hidden",
-                    }}
-                  >
-                    {/* 선택 체크마크 */}
-                    {selectedCharacter === "test" && (
-                      <div
-                        style={{
-                          position: "absolute",
-                          top: "8px",
-                          left: "8px",
-                          width: "20px",
-                          height: "20px",
-                          borderRadius: "50%",
-                          background: "#5A35EC",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          zIndex: 10,
-                        }}
-                      >
-                        <Check size={20} color="#FFF" />
-                      </div>
-                    )}
-                    {/* 캐릭터 프리뷰 (테스트) */}
-                    <Image
-                      src="/TestThumnbnail.jpg"
-                      alt="테스트"
-                      fill
-                      style={{
-                        objectFit: "cover",
-                        objectPosition: "center 20%",
-                        borderRadius: "16px",
-                      }}
-                    />
-                  </div>
-                  <div
-                    style={{
-                      alignSelf: "stretch",
-                      color: "#1D1D1D",
-                      textAlign: "center",
-                      fontFamily:
-                        '"Noto Sans KR", "Pretendard Variable", Pretendard, sans-serif',
-                      fontSize: "13px",
-                      fontStyle: "normal",
-                      fontWeight: 500,
-                      lineHeight: "20px",
-                      letterSpacing: "-0.26px",
-                    }}
-                  >
-                    테스트
-                  </div>
-                </div>
-
-                {/* 진영 루띠 캐릭터 */}
+                {/* 잔망 루피 캐릭터 (기본) */}
                 <div
                   style={{
                     display: "flex",
@@ -1255,6 +1173,70 @@ export default function ChatInterface() {
                     }}
                   >
                     잔망 루피
+                  </div>
+                </div>
+
+                {/* 테스트 캐릭터 (준비 중) */}
+                <div
+                  style={{
+                    display: "flex",
+                    width: "140px",
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: "8px",
+                    cursor: "pointer",
+                  }}
+                  onClick={() => {
+                    // 준비 중 메시지 표시
+                    setShowComingSoonToast(true);
+                    setTimeout(() => {
+                      setShowComingSoonToast(false);
+                    }, 2000);
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      height: "172px",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      alignSelf: "stretch",
+                      borderRadius: "16px",
+                      border: "1px solid #EEE",
+                      background: "#FAFAFA",
+                      position: "relative",
+                      overflow: "hidden",
+                      opacity: 0.6, // 준비 중임을 나타내기 위해 투명도 조정
+                    }}
+                  >
+                    {/* 캐릭터 프리뷰 (테스트) */}
+                    <Image
+                      src="/TestThumnbnail.jpg"
+                      alt="테스트"
+                      fill
+                      style={{
+                        objectFit: "cover",
+                        objectPosition: "center 20%",
+                        borderRadius: "16px",
+                      }}
+                    />
+                  </div>
+                  <div
+                    style={{
+                      alignSelf: "stretch",
+                      color: "#999",
+                      textAlign: "center",
+                      fontFamily:
+                        '"Noto Sans KR", "Pretendard Variable", Pretendard, sans-serif',
+                      fontSize: "13px",
+                      fontStyle: "normal",
+                      fontWeight: 500,
+                      lineHeight: "20px",
+                      letterSpacing: "-0.26px",
+                    }}
+                  >
+                    테스트
                   </div>
                 </div>
               </div>
@@ -1337,6 +1319,29 @@ export default function ChatInterface() {
               }}
             >
               마이크 권한이 필요합니다
+            </span>
+          </div>
+        </div>
+      )}
+      {/* 준비 중 토스트 메시지 */}
+      {showComingSoonToast && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 pointer-events-none">
+          <div
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg shadow-lg"
+            style={{
+              background: "rgba(0, 0, 0, 0.8)",
+              backdropFilter: "blur(10px)",
+            }}
+          >
+            <span
+              style={{
+                color: "#FFF",
+                fontFamily: '"Pretendard Variable", Pretendard, sans-serif',
+                fontSize: "13px",
+                fontWeight: 400,
+              }}
+            >
+              준비 중입니다..
             </span>
           </div>
         </div>
