@@ -459,132 +459,7 @@ export default function Avatar() {
     const time = state.clock.elapsedTime;
     const lerpSpeed = 3.0;
 
-    // 1. 뼈 애니메이션: vrm.scene 직접 순회 + 모든 본 이름 출력
-    let leftArmFound = false;
-    let rightArmFound = false;
-    let hipsFound = false;
-    let spineFound = false;
-
-    if (vrm.scene) {
-      // 🔍 5초마다 모든 본 이름 출력 (진단용)
-      if (Math.floor(time) % 5 === 0 && time - Math.floor(time) < delta) {
-        console.log("=== 🦴 모든 본 이름 목록 ===");
-        vrm.scene.traverse((obj: any) => {
-          if (obj.type === "Bone" || obj.isBone) {
-            console.log(`- ${obj.name}`);
-          }
-        });
-      }
-
-      vrm.scene.traverse((object: any) => {
-        if (!object.name) return;
-
-        // 왼쪽 어깨뼈(Shoulder/Clavicle) 조작
-        if (
-          (object.name.toLowerCase().includes("leftshoulder") ||
-            object.name.toLowerCase().includes("left_shoulder") ||
-            object.name.toLowerCase().includes("leftclavicle") ||
-            object.name === "leftShoulder") &&
-          !object.name.includes("Normalized")
-        ) {
-          object.rotation.z = -0.3;
-          if (object.parent) object.parent.updateWorldMatrix(true, false);
-          object.updateWorldMatrix(true, true);
-        }
-
-        // 왼팔 내리기 + Quaternion 사용
-        if (
-          (object.name.toLowerCase().includes("leftupperarm") ||
-            object.name.toLowerCase().includes("left_upperarm") ||
-            object.name === "leftUpperArm") &&
-          !object.name.includes("Normalized")
-        ) {
-          leftArmFound = true;
-
-          // Quaternion 직접 설정
-          const euler = new THREE.Euler(0.5, 0.3, -1.5, "XYZ");
-          object.quaternion.setFromEuler(euler);
-          
-          // Parent hierarchy 전체 강제 업데이트
-          if (object.parent) {
-            object.parent.updateWorldMatrix(true, false);
-          }
-          object.updateWorldMatrix(true, true);
-
-          if (Math.floor(time) % 2 === 0 && time - Math.floor(time) < delta) {
-            console.log(`✅ LEFT ARM 설정: ${object.name}`);
-          }
-        }
-
-        // 오른쪽 어깨뼈(Shoulder/Clavicle) 조작
-        if (
-          (object.name.toLowerCase().includes("rightshoulder") ||
-            object.name.toLowerCase().includes("right_shoulder") ||
-            object.name.toLowerCase().includes("rightclavicle") ||
-            object.name === "rightShoulder") &&
-          !object.name.includes("Normalized")
-        ) {
-          object.rotation.z = 0.3;
-          if (object.parent) object.parent.updateWorldMatrix(true, false);
-          object.updateWorldMatrix(true, true);
-        }
-
-        // 오른팔 내리기 + Quaternion 사용
-        if (
-          (object.name.toLowerCase().includes("rightupperarm") ||
-            object.name.toLowerCase().includes("right_upperarm") ||
-            object.name === "rightUpperArm") &&
-          !object.name.includes("Normalized")
-        ) {
-          rightArmFound = true;
-
-          // Quaternion 직접 설정
-          const euler = new THREE.Euler(0.5, -0.3, 1.5, "XYZ");
-          object.quaternion.setFromEuler(euler);
-          
-          // Parent hierarchy 전체 강제 업데이트
-          if (object.parent) {
-            object.parent.updateWorldMatrix(true, false);
-          }
-          object.updateWorldMatrix(true, true);
-
-          if (Math.floor(time) % 2 === 0 && time - Math.floor(time) < delta) {
-            console.log(`✅ RIGHT ARM 설정: ${object.name}`);
-          }
-        }
-
-        // 몸통 둥실거림
-        if (
-          object.name.toLowerCase().includes("hips") ||
-          object.name === "hips"
-        ) {
-          hipsFound = true;
-          object.position.y = Math.sin(time * 1.2) * 0.03;
-        }
-
-        // 숨쉬기 (범위 더 축소)
-        if (
-          object.name.toLowerCase().includes("spine") ||
-          object.name === "spine"
-        ) {
-          spineFound = true;
-          const s = 1.0 + Math.sin(time * 1.5) * 0.005; // 0.01 → 0.005로 더 축소
-          object.scale.set(s, s, s);
-        }
-      });
-
-      // 본을 못 찾았으면 경고
-      if (Math.floor(time) % 3 === 0 && time - Math.floor(time) < delta) {
-        if (!leftArmFound)
-          console.warn("⚠️ leftUpperArm 본을 찾을 수 없습니다!");
-        if (!rightArmFound)
-          console.warn("⚠️ rightUpperArm 본을 찾을 수 없습니다!");
-        if (!hipsFound) console.warn("⚠️ hips 본을 찾을 수 없습니다!");
-        if (!spineFound) console.warn("⚠️ spine 본을 찾을 수 없습니다!");
-      }
-    }
-
-    // 3. 표정(BlendShape) 및 립싱크 로직
+    // 표정(BlendShape) 및 립싱크 로직
     // 오디오 볼륨 계산
     if (
       analyserRef.current &&
@@ -669,11 +544,8 @@ export default function Avatar() {
       (vrm.lookAt as any).lookAtTarget = targetLookAtRef.current;
     }
 
-    // 2. 표정만 수동 업데이트 (vrm.update() 제거!)
-    // vrm.update()가 본 rotation을 계속 리셋하므로 제거하고 표정만 수동 업데이트
-    if (vrm.expressionManager) {
-      vrm.expressionManager.update();
-    }
+    // VRM 업데이트 (표정, lookAt 등)
+    vrm.update(delta);
   });
 
   return (
@@ -682,3 +554,5 @@ export default function Avatar() {
     </group>
   );
 }
+
+
