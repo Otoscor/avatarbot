@@ -63,7 +63,7 @@ export default function Avatar() {
 
     // 선택된 캐릭터에 따라 다른 VRM 파일 로드
     const vrmPath =
-      selectedCharacter === "jinyoung" ? "/zanmangloopy.vrm" : "/test.vrm";
+      selectedCharacter === "jinyoung" ? "/zanmangloopy.vrm" : "/avatar.vrm";
 
     console.log("VRM 경로:", vrmPath);
 
@@ -84,8 +84,8 @@ export default function Avatar() {
             // 🔍 모든 humanoid 본 이름 출력
             console.log("🦴 사용 가능한 모든 본(Bone) 목록:");
             const humanoidBones = vrmData.humanoid.humanBones;
-            Object.keys(humanoidBones).forEach((boneName) => {
-              const bone = humanoidBones[boneName as any];
+            (Object.keys(humanoidBones) as Array<keyof typeof humanoidBones>).forEach((boneName) => {
+              const bone = humanoidBones[boneName];
               if (bone && bone.node) {
                 console.log(`  - ${boneName}: ${bone.node.name}`);
               }
@@ -227,9 +227,19 @@ export default function Avatar() {
       }
 
       // VRM 모델의 위치 및 회전 조정 (캐릭터별로 다른 위치 설정)
-      const yPosition = selectedCharacter === "jinyoung" ? -0.5 : -1.2;
+      let yPosition = -1.2; // 기본값
+      let yRotation = 0; // 기본 회전값
+      
+      if (selectedCharacter === "jinyoung") {
+        yPosition = -0.5;
+        yRotation = 0; // 정면
+      } else if (selectedCharacter === "test") {
+        yPosition = -1.2; // 다리만 보여서 아래로 내림
+        yRotation = Math.PI; // 180도 회전 (나를 바라보도록)
+      }
+      
       gltf.scene.position.set(0, yPosition, 0);
-      gltf.scene.rotation.y = 0; // 정면을 향하도록
+      gltf.scene.rotation.y = yRotation;
       gltf.scene.scale.set(1, 1, 1);
       groupRef.current.add(gltf.scene);
 
@@ -320,7 +330,10 @@ export default function Avatar() {
     }
 
     // 새 오디오 생성 및 재생
-    const audio = new Audio(`data:audio/mp3;base64,${currentAudio}`);
+    const audio = new Audio();
+    audio.preload = "auto"; // 오디오 미리 로드
+    audio.crossOrigin = "anonymous"; // CORS 문제 방지
+    audio.src = `data:audio/mp3;base64,${currentAudio}`;
     audioRef.current = audio;
 
     let audioContext: AudioContext;
@@ -337,25 +350,51 @@ export default function Avatar() {
     }
 
     const analyser = audioContext.createAnalyser();
-    analyser.fftSize = 256;
+    analyser.fftSize = 512;
+    analyser.smoothingTimeConstant = 0.8;
+    analyser.minDecibels = -90;
+    analyser.maxDecibels = -10;
     const bufferLength = analyser.frequencyBinCount;
     const dataArray = new Uint8Array(bufferLength);
 
     analyserRef.current = analyser;
     dataArrayRef.current = dataArray;
 
+    // GainNode 추가 (볼륨 안정화)
+    const gainNode = audioContext.createGain();
+    gainNode.gain.value = 1.0; // 기본 볼륨
+
+    // 오디오가 충분히 로드될 때까지 대기
+    audio.addEventListener("canplaythrough", () => {
+      console.log("Avatar: 오디오 버퍼링 완료");
+    });
+
     const source = audioContext.createMediaElementSource(audio);
     sourceRef.current = source;
 
-    source.connect(analyser);
-    analyser.connect(audioContext.destination);
+    // 오디오 라우팅: source -> gainNode -> [analyser 분기] -> destination
+    // 메인 오디오는 gainNode를 통해 직접 출력
+    source.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    // 립싱크용 분석은 별도로 연결 (재생에 영향 없음)
+    gainNode.connect(analyser);
 
     console.log("Avatar: 오디오 재생 시작");
     const playAudio = async () => {
       try {
+        // AudioContext 활성화
         if (audioContextRef.current?.state === "suspended") {
           await audioContextRef.current.resume();
         }
+        
+        // 오디오가 충분히 로드될 때까지 대기
+        if (audio.readyState < 3) { // HAVE_FUTURE_DATA
+          await new Promise((resolve) => {
+            audio.addEventListener("canplay", resolve, { once: true });
+          });
+        }
+        
         await audio.play();
         console.log("Avatar: 오디오 재생 성공");
         setAudioPlaying(true);
@@ -416,6 +455,42 @@ export default function Avatar() {
       volumeRef.current = 0;
       setAudioPlaying(false);
 
+      // 모든 표정 및 립싱크 BlendShape 즉시 리셋
+      if (vrm && vrm.expressionManager) {
+        vrm.expressionManager.expressions.forEach((expression) => {
+          const nameLower = expression.expressionName.toLowerCase();
+          
+          // 립싱크 관련 BlendShape 0으로
+          if (
+            ["aa", "a", "ih", "i", "e", "ou", "u", "o", "ee"].includes(nameLower) ||
+            ["vrc.v_aa", "vrc.v_ih", "vrc.v_ou", "vrc.v_ee", "vrc.v_oh"].includes(nameLower) ||
+            nameLower.includes("mouth") || 
+            nameLower.includes("lip")
+          ) {
+            vrm.expressionManager.setValue(expression.expressionName, 0);
+            blendShapeWeightsRef.current[expression.expressionName] = 0;
+          }
+          
+          // 눈 깜빡임 BlendShape 0으로 (눈 뜨기)
+          if (
+            ["blink", "blinkleft", "blinkright"].includes(nameLower) ||
+            nameLower.includes("blink")
+          ) {
+            vrm.expressionManager.setValue(expression.expressionName, 0);
+            blendShapeWeightsRef.current[expression.expressionName] = 0;
+          }
+        });
+        
+        // 표정을 neutral로 리셋
+        vrm.expressionManager.setValue("neutral", 1.0);
+        blendShapeWeightsRef.current["neutral"] = 1.0;
+      }
+      
+      // 눈 깜빡임 상태 리셋
+      isBlinkingRef.current = false;
+      blinkWeightRef.current = 0;
+      nextBlinkTimeRef.current = Date.now() / 1000 + 3 + Math.random() * 2;
+
       if (sourceRef.current) {
         sourceRef.current.disconnect();
         sourceRef.current = null;
@@ -447,6 +522,38 @@ export default function Avatar() {
       }
       volumeRef.current = 0;
       setAudioPlaying(false);
+      
+      // cleanup 시에도 모든 BlendShape 리셋
+      if (vrm && vrm.expressionManager) {
+        vrm.expressionManager.expressions.forEach((expression) => {
+          const nameLower = expression.expressionName.toLowerCase();
+          
+          // 립싱크 및 눈 깜빡임 리셋
+          if (
+            ["aa", "a", "ih", "i", "e", "ou", "u", "o", "ee"].includes(nameLower) ||
+            ["vrc.v_aa", "vrc.v_ih", "vrc.v_ou", "vrc.v_ee", "vrc.v_oh"].includes(nameLower) ||
+            nameLower.includes("mouth") || 
+            nameLower.includes("lip") ||
+            ["blink", "blinkleft", "blinkright"].includes(nameLower) ||
+            nameLower.includes("blink")
+          ) {
+            vrm.expressionManager.setValue(expression.expressionName, 0);
+            if (blendShapeWeightsRef.current) {
+              blendShapeWeightsRef.current[expression.expressionName] = 0;
+            }
+          }
+        });
+        
+        // neutral 표정으로
+        vrm.expressionManager.setValue("neutral", 1.0);
+        if (blendShapeWeightsRef.current) {
+          blendShapeWeightsRef.current["neutral"] = 1.0;
+        }
+      }
+      
+      // 눈 깜빡임 상태 리셋
+      isBlinkingRef.current = false;
+      blinkWeightRef.current = 0;
     };
   }, [currentAudio, vrm, setAudioPlaying]);
 
@@ -460,7 +567,7 @@ export default function Avatar() {
     const lerpSpeed = 3.0;
 
     // 표정(BlendShape) 및 립싱크 로직
-    // 오디오 볼륨 계산
+    // ===== 오디오 볼륨 계산 및 립싱크 준비 =====
     if (
       analyserRef.current &&
       dataArrayRef.current &&
@@ -469,11 +576,39 @@ export default function Avatar() {
     ) {
       // @ts-expect-error - getByteFrequencyData accepts Uint8Array
       analyserRef.current.getByteFrequencyData(dataArrayRef.current);
-      let sum = 0;
-      for (let i = 0; i < dataArrayRef.current.length; i++)
-        sum += dataArrayRef.current[i];
+      
+      // 주파수 대역별로 분석하여 더 정확한 립싱크
+      let lowFreqSum = 0;  // 저음역 (0-85Hz) - 모음
+      let midFreqSum = 0;  // 중음역 (85-255Hz) - 자음
+      let highFreqSum = 0; // 고음역 (255-512Hz) - 치찰음
+      
+      const lowBound = Math.floor(dataArrayRef.current.length * 0.1);
+      const midBound = Math.floor(dataArrayRef.current.length * 0.3);
+      
+      // 저음역 (모음 소리)
+      for (let i = 0; i < lowBound; i++) {
+        lowFreqSum += dataArrayRef.current[i];
+      }
+      
+      // 중음역 (일반 발음)
+      for (let i = lowBound; i < midBound; i++) {
+        midFreqSum += dataArrayRef.current[i];
+      }
+      
+      // 고음역 (치찰음)
+      for (let i = midBound; i < dataArrayRef.current.length; i++) {
+        highFreqSum += dataArrayRef.current[i];
+      }
+      
+      // 전체 평균 볼륨 (립싱크 강도)
+      let totalSum = 0;
+      for (let i = 0; i < dataArrayRef.current.length; i++) {
+        totalSum += dataArrayRef.current[i];
+      }
+      
+      // 볼륨을 좀 더 민감하게 반응하도록 조정
       volumeRef.current = Math.min(
-        sum / dataArrayRef.current.length / 255,
+        Math.pow(totalSum / dataArrayRef.current.length / 255, 0.7), // 제곱근으로 더 민감하게
         1.0
       );
     } else {
@@ -495,10 +630,65 @@ export default function Avatar() {
 
     allExpressions.forEach((expression) => {
       const name = expression.expressionName;
+      const nameLower = name.toLowerCase();
       let targetWeight = name === targetPresetName ? 1.0 : 0.0;
 
-      // 립싱크 (aa)
-      if (name.toLowerCase() === "aa") targetWeight = volumeRef.current * 1.5; // 입을 좀 더 크게 벌리게 1.5배
+      // ===== 립싱크 (Lip-Sync) - 오디오 재생 중일 때만 작동 =====
+      const volume = volumeRef.current;
+      const isAudioActive = audioRef.current && !audioRef.current.paused;
+      
+      // 오디오가 재생 중이고 실제 소리가 있을 때만 립싱크 적용
+      if (isAudioActive && volume > 0.05) { // 최소 임계값 0.05
+        // 'aa' - 입을 크게 벌림 (모음 a, o)
+        if (nameLower === "aa" || nameLower === "a") {
+          targetWeight = Math.min(volume * 1.8, 1.0); // 강한 립싱크
+        }
+        
+        // 'ih' - 입을 옆으로 벌림 (모음 i, e)
+        else if (nameLower === "ih" || nameLower === "i" || nameLower === "e") {
+          targetWeight = Math.min(volume * 1.5, 1.0);
+        }
+        
+        // 'ou' - 입을 둥글게 (모음 u, o)
+        else if (nameLower === "ou" || nameLower === "u" || nameLower === "o") {
+          targetWeight = Math.min(volume * 1.3, 1.0);
+        }
+        
+        // 'ee' - 이 발음
+        else if (nameLower === "ee") {
+          targetWeight = Math.min(volume * 1.2, 1.0);
+        }
+        
+        // 일반 입 모양 (기본 립싱크)
+        else if (
+          nameLower.includes("mouth") || 
+          nameLower.includes("lip") ||
+          nameLower === "vrc.v_aa" ||
+          nameLower === "vrc.v_ih" ||
+          nameLower === "vrc.v_ou" ||
+          nameLower === "vrc.v_ee" ||
+          nameLower === "vrc.v_oh"
+        ) {
+          targetWeight = Math.min(volume * 1.5, 1.0);
+        }
+      } else {
+        // 오디오가 없거나 재생 중이 아닐 때는 입 관련 BlendShape를 0으로
+        if (
+          nameLower === "aa" || nameLower === "a" ||
+          nameLower === "ih" || nameLower === "i" || nameLower === "e" ||
+          nameLower === "ou" || nameLower === "u" || nameLower === "o" ||
+          nameLower === "ee" ||
+          nameLower.includes("mouth") || 
+          nameLower.includes("lip") ||
+          nameLower === "vrc.v_aa" ||
+          nameLower === "vrc.v_ih" ||
+          nameLower === "vrc.v_ou" ||
+          nameLower === "vrc.v_ee" ||
+          nameLower === "vrc.v_oh"
+        ) {
+          targetWeight = 0; // 입을 다물음
+        }
+      }
 
       // 눈 깜빡임
       if (["blink", "blinkleft", "blinkright"].includes(name.toLowerCase())) {
@@ -529,10 +719,26 @@ export default function Avatar() {
       }
 
       const currentWeight = blendShapeWeightsRef.current[name] || 0;
+      // 립싱크는 빠르게 반응, 다른 표정은 부드럽게
+      const isLipSync = 
+        nameLower === "aa" || nameLower === "a" ||
+        nameLower === "ih" || nameLower === "i" || nameLower === "e" ||
+        nameLower === "ou" || nameLower === "u" || nameLower === "o" ||
+        nameLower === "ee" ||
+        nameLower.includes("mouth") || 
+        nameLower.includes("lip") ||
+        nameLower === "vrc.v_aa" ||
+        nameLower === "vrc.v_ih" ||
+        nameLower === "vrc.v_ou" ||
+        nameLower === "vrc.v_ee" ||
+        nameLower === "vrc.v_oh";
+      
+      const blendSpeed = isLipSync ? 15.0 : lerpSpeed; // 립싱크는 5배 빠르게
+      
       const newWeight = THREE.MathUtils.lerp(
         currentWeight,
         targetWeight,
-        lerpSpeed * delta
+        blendSpeed * delta
       );
       blendShapeWeightsRef.current[name] = newWeight;
       vrm.expressionManager?.setValue(name, newWeight);
@@ -544,8 +750,110 @@ export default function Avatar() {
       (vrm.lookAt as any).lookAtTarget = targetLookAtRef.current;
     }
 
-    // VRM 업데이트 (표정, lookAt 등)
+    // VRM 업데이트 (표정, lookAt 등) - 본 조작 전에 실행
     vrm.update(delta);
+
+    // ===== 캐릭터별 본 애니메이션 (VRM update 후에 실행) =====
+    if (vrm.scene) {
+      if (selectedCharacter === "test") {
+        // ===== 테스트 캐릭터 A자 포즈 + 애니메이션 =====
+        vrm.scene.traverse((object: any) => {
+          if (!object.name) return;
+
+          // === 포즈 설정 ===
+          
+          // 왼쪽 어깨 - 자연스럽게
+          if (object.name === "J_Bip_L_Shoulder") {
+            object.rotation.z = 0; // 자연스럽게 (올라가지 않도록)
+            if (object.parent) object.parent.updateWorldMatrix(true, false);
+            object.updateWorldMatrix(true, true);
+          }
+
+          // 왼팔 A자 포즈 (약 70도 아래로)
+          if (object.name === "J_Bip_L_UpperArm") {
+            const euler = new THREE.Euler(0, 0, Math.PI * 0.4, "XYZ"); // +72도 (확 내림)
+            object.quaternion.setFromEuler(euler);
+            if (object.parent) object.parent.updateWorldMatrix(true, false);
+            object.updateWorldMatrix(true, true);
+          }
+
+          // 왼팔꿈치 펼침
+          if (object.name === "J_Bip_L_LowerArm") {
+            object.rotation.set(0, 0, 0);
+            if (object.parent) object.parent.updateWorldMatrix(true, false);
+            object.updateWorldMatrix(true, true);
+          }
+
+          // 왼손 자연스럽게
+          if (object.name === "J_Bip_L_Hand") {
+            object.rotation.set(0, 0, 0);
+            if (object.parent) object.parent.updateWorldMatrix(true, false);
+            object.updateWorldMatrix(true, true);
+          }
+
+          // 오른쪽 어깨 - 자연스럽게
+          if (object.name === "J_Bip_R_Shoulder") {
+            object.rotation.z = 0; // 자연스럽게 (올라가지 않도록)
+            if (object.parent) object.parent.updateWorldMatrix(true, false);
+            object.updateWorldMatrix(true, true);
+          }
+
+          // 오른팔 A자 포즈 (약 70도 아래로)
+          if (object.name === "J_Bip_R_UpperArm") {
+            const euler = new THREE.Euler(0, 0, -Math.PI * 0.4, "XYZ"); // -72도 (확 내림)
+            object.quaternion.setFromEuler(euler);
+            if (object.parent) object.parent.updateWorldMatrix(true, false);
+            object.updateWorldMatrix(true, true);
+          }
+
+          // 오른팔꿈치 펼침
+          if (object.name === "J_Bip_R_LowerArm") {
+            object.rotation.set(0, 0, 0);
+            if (object.parent) object.parent.updateWorldMatrix(true, false);
+            object.updateWorldMatrix(true, true);
+          }
+
+          // 오른손 자연스럽게
+          if (object.name === "J_Bip_R_Hand") {
+            object.rotation.set(0, 0, 0);
+            if (object.parent) object.parent.updateWorldMatrix(true, false);
+            object.updateWorldMatrix(true, true);
+          }
+
+          // === 루프 애니메이션 ===
+          
+          // 1. 둥실거림 제거 (캐릭터 위치 문제 발생)
+          // Hips는 캐릭터 전체 위치를 제어하므로 건드리지 않음
+
+          // 2. 호흡 애니메이션 (Spine 스케일)
+          if (object.name === "J_Bip_C_Spine") {
+            const breathScale = 1.0 + Math.sin(time * 0.8) * 0.008; // 매우 미세한 호흡
+            object.scale.set(breathScale, breathScale, breathScale);
+          }
+
+          // 3. 가슴 호흡 (Chest)
+          if (object.name === "J_Bip_C_Chest") {
+            const chestScale = 1.0 + Math.sin(time * 0.8 + 0.3) * 0.01; // 약간 더 큰 호흡
+            object.scale.set(chestScale, chestScale, chestScale);
+          }
+
+          // 4. 미세한 좌우 흔들림 (UpperChest)
+          if (object.name === "J_Bip_C_UpperChest") {
+            const swayAngle = Math.sin(time * 0.6) * 0.015; // 매우 미세한 좌우 흔들림
+            object.rotation.z = swayAngle;
+          }
+
+          // 5. 머리 미세 움직임
+          if (object.name === "J_Bip_C_Head") {
+            const headSway = Math.sin(time * 0.7 + 0.5) * 0.02; // 미세한 고개 움직임
+            object.rotation.x = headSway;
+          }
+        });
+      } else if (selectedCharacter === "jinyoung") {
+        // ===== 루피 캐릭터 (본 조작 없음, 원본 유지) =====
+        // 루피는 VRM의 기본 포즈를 그대로 사용
+      }
+    }
   });
 
   return (
