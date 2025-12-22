@@ -1716,15 +1716,11 @@ export default function ChatInterface() {
                         top: 0,
                         bottom: 0,
                         width: "50%",
-                        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: "48px",
+                        background: "linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%)",
+                        backgroundSize: "cover",
+                        backgroundPosition: "center",
                       }}
-                    >
-                      🏢
-                    </div>
+                    />
                   </div>
 
                   {/* 배경 이름 */}
@@ -1746,7 +1742,7 @@ export default function ChatInterface() {
                   </div>
                 </div>
 
-                {/* 무작위 배경 */}
+                {/* forest 배경 */}
                 <div
                   style={{
                     display: "flex",
@@ -1757,7 +1753,7 @@ export default function ChatInterface() {
                     cursor: "pointer",
                   }}
                   onClick={() => {
-                    setSelectedBackground("random");
+                    setSelectedBackground("forest");
                     setShowBackgroundModal(false);
                   }}
                 >
@@ -1771,7 +1767,7 @@ export default function ChatInterface() {
                       justifyContent: "center",
                       borderRadius: "20px",
                       border:
-                        selectedBackground === "random"
+                        selectedBackground === "forest"
                           ? "2px solid #5A35EC"
                           : "1px solid #EEE",
                       background: "#FAFAFA",
@@ -1780,7 +1776,7 @@ export default function ChatInterface() {
                     }}
                   >
                     {/* 선택 체크마크 */}
-                    {selectedBackground === "random" && (
+                    {selectedBackground === "forest" && (
                       <div
                         style={{
                           position: "absolute",
@@ -1808,15 +1804,11 @@ export default function ChatInterface() {
                         top: 0,
                         bottom: 0,
                         width: "50%",
-                        background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "center",
-                        fontSize: "48px",
+                        background: "linear-gradient(135deg, #0ba360 0%, #3cba92 100%)",
+                        backgroundSize: "cover",
+                        backgroundPosition: "center",
                       }}
-                    >
-                      🎲
-                    </div>
+                    />
                   </div>
 
                   {/* 배경 이름 */}
@@ -1834,7 +1826,7 @@ export default function ChatInterface() {
                       letterSpacing: "-0.36px",
                     }}
                   >
-                    무작위
+                    forest
                   </div>
                 </div>
               </div>
