@@ -12,11 +12,16 @@ import { useChatStore, type Emotion } from "@/store/useChatStore";
 export default function Avatar() {
   const [gltf, setGltf] = useState<GLTF | null>(null);
   const [vrm, setVrm] = useState<VRM | null>(null);
+  const [isGLBModel, setIsGLBModel] = useState<boolean>(false); // GLB 모델 여부
   const groupRef = useRef<THREE.Group>(null);
+  const mixerRef = useRef<THREE.AnimationMixer | null>(null); // AnimationMixer for GLB
+  const glbActionsRef = useRef<Record<string, THREE.AnimationAction>>({}); // GLB 애니메이션 액션들
+  const currentGLBActionRef = useRef<THREE.AnimationAction | null>(null); // 현재 재생 중인 GLB 애니메이션
   const currentEmotion = useChatStore((state) => state.currentEmotion);
   const currentAudio = useChatStore((state) => state.currentAudio);
   const setAudioPlaying = useChatStore((state) => state.setAudioPlaying);
   const selectedCharacter = useChatStore((state) => state.selectedCharacter);
+  const messages = useChatStore((state) => state.messages);
   const targetEmotionRef = useRef<Emotion>("neutral");
   const blendShapeWeightsRef = useRef<Record<string, number>>({});
 
@@ -43,40 +48,180 @@ export default function Avatar() {
 
   const { camera } = useThree();
 
-  // VRM 모델 로드 (캐릭터 선택에 따라 다른 파일 로드)
+  // 모델 로드 (캐릭터 선택에 따라 VRM 또는 GLB 로드)
   useEffect(() => {
-    console.log("=== VRM 모델 로드 시작 ===");
+    console.log("=== 모델 로드 시작 ===");
 
     // 기존 모델 정리
     if (gltf && groupRef.current) {
       groupRef.current.remove(gltf.scene);
       setGltf(null);
       setVrm(null);
+      setIsGLBModel(false);
     }
 
     // 초기화 플래그 리셋
     vrmInitializedRef.current = false;
 
-    // VRMLoaderPlugin을 등록한 로더 생성
+    // 캐릭터별 파일 경로 및 타입 결정
+    const isGLB = selectedCharacter === "jinyoung";
+    const modelPath = isGLB ? "/loopy2.glb" : "/avatar.vrm";
+    
+    console.log("모델 타입:", isGLB ? "GLB" : "VRM");
+    console.log("모델 경로:", modelPath);
+
+    // 로더 생성 (GLB는 VRM 플러그인 없이)
     const loader = new GLTFLoader();
-    loader.register((parser) => new VRMLoaderPlugin(parser));
+    if (!isGLB) {
+      loader.register((parser) => new VRMLoaderPlugin(parser));
+    }
 
-    // 선택된 캐릭터에 따라 다른 VRM 파일 로드
-    const vrmPath =
-      selectedCharacter === "jinyoung" ? "/zanmangloopy.vrm" : "/avatar.vrm";
-
-    console.log("VRM 경로:", vrmPath);
-
-    // VRM 파일 로드
+    // 모델 파일 로드
     loader.load(
-      vrmPath,
+      modelPath,
       (loadedGltf) => {
-        console.log("VRM 로드 성공!");
+        console.log("모델 로드 성공!", isGLB ? "GLB" : "VRM");
         setGltf(loadedGltf);
-        const vrmData = loadedGltf.userData.vrm as VRM;
+        setIsGLBModel(isGLB);
+        
+        if (isGLB) {
+          // GLB 모델인 경우
+          console.log("GLB 모델 로드 완료");
+          console.log("GLB Scene:", loadedGltf.scene);
+          
+          // === 애니메이션 확인 및 재생 ===
+          console.log("🎬 GLB 애니메이션 확인:");
+          console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+          if (loadedGltf.animations && loadedGltf.animations.length > 0) {
+            console.log(`✅ 총 ${loadedGltf.animations.length}개의 애니메이션이 GLB에 포함되어 있습니다!`);
+            console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+            loadedGltf.animations.forEach((clip, index) => {
+              console.log(`📹 애니메이션 ${index + 1}/${loadedGltf.animations.length}:`);
+              console.log(`   이름: ${clip.name}`);
+              console.log(`   길이: ${clip.duration.toFixed(2)}초`);
+              console.log(`   트랙 수: ${clip.tracks.length}개`);
+              console.log(`   ────────────────────────`);
+            });
+            
+            // AnimationMixer 생성 및 애니메이션 설정
+            const mixer = new THREE.AnimationMixer(loadedGltf.scene);
+            mixerRef.current = mixer;
+            
+            // 감정별 애니메이션 매핑
+            const emotionAnimationMap: Record<string, string> = {
+              neutral: "Idle_01.001",
+              happy: "smile.001",
+              sad: "concern.001",
+              angry: "concern.001",
+              surprised: "blush.001",
+            };
+            
+            // 모든 애니메이션 액션 생성 및 저장
+            const actions: Record<string, THREE.AnimationAction> = {};
+            loadedGltf.animations.forEach((clip) => {
+              const action = mixer.clipAction(clip);
+              action.setLoop(THREE.LoopRepeat, Infinity);
+              action.clampWhenFinished = false;
+              action.timeScale = 0.1; // 느린 속도
+              actions[clip.name] = action;
+              console.log(`📦 애니메이션 준비: ${clip.name}`);
+            });
+            glbActionsRef.current = actions;
+            
+            // 기본 Idle 애니메이션 재생
+            const defaultAnimation = "Idle_01.001";
+            if (actions[defaultAnimation]) {
+              actions[defaultAnimation].play();
+              currentGLBActionRef.current = actions[defaultAnimation];
+              console.log(`▶️ 기본 애니메이션 재생: ${defaultAnimation}`);
+            }
+            
+            console.log(`\n💡 감정별 애니메이션 매핑:`);
+            Object.entries(emotionAnimationMap).forEach(([emotion, animName]) => {
+              console.log(`   ${emotion} → ${animName}`);
+            });
+          } else {
+            console.log("⚠️ 애니메이션이 없습니다");
+          }
+          
+          // GLB의 본 구조 출력
+          console.log("🦴 GLB 본(Bone) 구조:");
+          loadedGltf.scene.traverse((object) => {
+            if (object.type === "Bone" || object.name.includes("Bone") || object.name.includes("bone")) {
+              console.log(`  - ${object.name} (type: ${object.type})`);
+            }
+          });
+          
+          // GLB의 Mesh와 MorphTargets 출력
+          console.log("🎭 GLB Mesh 및 BlendShape:");
+          loadedGltf.scene.traverse((object) => {
+            if ((object as THREE.Mesh).isMesh) {
+              const mesh = object as THREE.Mesh;
+              if (mesh.morphTargetDictionary && mesh.morphTargetInfluences) {
+                console.log(`Mesh: ${mesh.name}`);
+                console.log("  MorphTargets:", Object.keys(mesh.morphTargetDictionary));
+              }
+            }
+          });
 
-        if (vrmData) {
-          setVrm(vrmData);
+          // GLB 모델 (루피)의 초기 포즈 설정
+          console.log("🔧 루피 GLB 모델 초기 포즈 설정 중...");
+          
+          // === 1단계: 모든 오브젝트 출력 (Bone이 아닌 것도 포함) ===
+          console.log("🔍 === GLB 전체 계층 구조 분석 ===");
+          
+          const armRelatedObjects: any[] = [];
+          
+          loadedGltf.scene.traverse((object: any) => {
+            if (!object.name) return;
+            const name = object.name.toLowerCase();
+            
+            // 팔/어깨 관련된 모든 오브젝트 수집
+            if (name.includes("arm") || name.includes("shoulder") || 
+                name.includes("hand") || name.includes("wrist") ||
+                name.includes("forearm") || name.includes("elbow")) {
+              armRelatedObjects.push({
+                name: object.name,
+                type: object.type,
+                parent: object.parent?.name || "root",
+                children: object.children.length,
+                rotation: {
+                  x: object.rotation.x.toFixed(3),
+                  y: object.rotation.y.toFixed(3),
+                  z: object.rotation.z.toFixed(3)
+                }
+              });
+            }
+          });
+          
+          console.log("\n📋 팔/어깨 관련 오브젝트 전체 목록 (Type 포함):");
+          armRelatedObjects.forEach(obj => {
+            console.log(`\n이름: ${obj.name}`);
+            console.log(`  타입: ${obj.type} ⭐`);
+            console.log(`  부모: ${obj.parent}`);
+            console.log(`  자식 수: ${obj.children}`);
+            console.log(`  회전: x=${obj.rotation.x}, y=${obj.rotation.y}, z=${obj.rotation.z}`);
+          });
+          
+          console.log("\n\n💡 === 중요 정보 ===");
+          console.log("위에서 'type: Bone'인 것들이 실제 변형을 담당합니다!");
+          console.log("팔을 제어하는 본은 보통 다음 중 하나입니다:");
+          console.log("1. shoulderl/shoulderr (어깨)");
+          console.log("2. arml/armr 또는 upper_arml/upper_armr (상완)");
+          console.log("3. 부모 본의 이름을 확인하여 계층 구조 파악 필요");
+          
+          // === 2단계: GLB 애니메이션이 있으면 본 조작 안 함 ===
+          console.log("\n\n💡 === GLB 모델은 애니메이션을 재생합니다 ===");
+          console.log("⚠️ 본을 직접 조작하지 않고 내장 애니메이션을 사용합니다");
+          console.log("⚠️ 팔 포즈를 조정하려면 Blender 등에서 애니메이션을 수정해야 합니다");
+          
+          console.log("\n✅ 루피 GLB 초기 포즈 설정 완료");
+          console.log("👆 위 로그를 확인하여 어떤 본이 실제로 팔을 제어하는지 파악해주세요!");
+        } else {
+          // VRM 모델인 경우
+          const vrmData = loadedGltf.userData.vrm as VRM;
+          if (vrmData) {
+            setVrm(vrmData);
 
           // ===== 1단계: 디버깅 로그 추가 (필수) =====
           console.log("=== VRM 뼈대 구조 점검 ===");
@@ -207,16 +352,198 @@ export default function Avatar() {
             console.warn("⚠️ lookAt 기능을 사용할 수 없습니다");
           }
 
-          vrmInitializedRef.current = true;
-          console.log("=== VRM 초기화 완료 ===");
+            vrmInitializedRef.current = true;
+            console.log("=== VRM 초기화 완료 ===");
+          }
         }
+        
+        vrmInitializedRef.current = true;
       },
       undefined,
       (error) => {
-        console.error("❌ VRM 파일 로드 중 오류 발생:", error);
+        console.error("❌ 모델 파일 로드 중 오류 발생:", error);
       }
     );
+
+    // Cleanup
+    return () => {
+      if (mixerRef.current) {
+        mixerRef.current.stopAllAction();
+        mixerRef.current = null;
+      }
+    };
   }, [selectedCharacter]);
+
+  // 이전 애니메이션 추적 (중복 방지)
+  const lastAnimationRef = useRef<string>("");
+  
+  // 텍스트 기반 애니메이션 선택 함수 (향상된 버전)
+  const selectAnimationFromText = (text: string, emotion: Emotion): string => {
+    // 랜덤 선택 헬퍼 함수
+    const randomSelect = (animations: string[]): string => {
+      return animations[Math.floor(Math.random() * animations.length)];
+    };
+    
+    // 중복 방지 랜덤 선택
+    const randomSelectNonRepeat = (animations: string[]): string => {
+      // 선택지가 1개뿐이면 그냥 반환
+      if (animations.length === 1) return animations[0];
+      
+      // 이전과 다른 애니메이션 선택
+      const filtered = animations.filter(anim => anim !== lastAnimationRef.current);
+      if (filtered.length === 0) return randomSelect(animations);
+      
+      return randomSelect(filtered);
+    };
+    
+    // 텍스트 분석을 위한 키워드 매핑 (여러 애니메이션 후보)
+    const textPatterns = [
+      // 미소/행복 관련 - 다양한 애니메이션 선택
+      { 
+        keywords: ['ㅎㅎ', 'ㅋㅋ', '완전', '좋아', '기쁘', '행복', '최고', '굿', '좋네', '멋지', '훌륭'],
+        animations: ['smile.001', 'blush.001'], // 웃음 + 수줍음 섞기
+        weight: 3
+      },
+      
+      // 강한 긍정 - 놀람과 미소 섞기
+      { 
+        keywords: ['대박', '신나', '즐거', '완벽', '끝내주', '짱', '와우'],
+        animations: ['blush.001', 'smile.001'],
+        weight: 3
+      },
+      
+      // 걱정/슬픔 관련
+      { 
+        keywords: ['걱정', '슬프', '안타까', '힘들', '어려', '불안', '우울', '속상'],
+        animations: ['concern.001'],
+        weight: 2
+      },
+      
+      // 사과/미안 - 걱정과 기본 섞기
+      { 
+        keywords: ['미안', '죄송', '아쉽', '양해'],
+        animations: ['concern.001', 'Idle_01.001'],
+        weight: 2
+      },
+      
+      // 당황/놀람 관련
+      { 
+        keywords: ['헐', '어머', '와', '우와', '헉', '어', '오', '세상'],
+        animations: ['blush.001'],
+        weight: 3
+      },
+      
+      // 진지/확신 - 다양한 표현
+      { 
+        keywords: ['진짜', '정말', '확실', '분명', '당연'],
+        animations: ['smile.001', 'Idle_01.001', 'blush.001'],
+        weight: 2
+      },
+      
+      // 질문/고민 - 기본 동작들
+      { 
+        keywords: ['음', '글쎄', '아마', '어쩌면', '혹시'],
+        animations: ['Idle_01.001', 'concern.001'],
+        weight: 1
+      },
+      
+      // 긍정/동의 응답
+      { 
+        keywords: ['그러', '그치', '응', '맞아', '네', '알겠'],
+        animations: ['Idle_01.001', 'smile.001'],
+        weight: 1
+      },
+    ];
+    
+    // 매칭된 패턴들과 가중치 수집
+    const matchedPatterns: { pattern: typeof textPatterns[0], keyword: string }[] = [];
+    
+    for (const pattern of textPatterns) {
+      const matchedKeyword = pattern.keywords.find(keyword => text.includes(keyword));
+      if (matchedKeyword) {
+        matchedPatterns.push({ pattern, keyword: matchedKeyword });
+      }
+    }
+    
+    // 텍스트 길이에 따른 추가 가중치
+    const textLength = text.length;
+    let selectedAnimation: string;
+    
+    if (matchedPatterns.length > 0) {
+      // 여러 패턴이 매칭되면 가장 가중치가 높은 것 선택
+      const bestPattern = matchedPatterns.reduce((best, current) => 
+        current.pattern.weight > best.pattern.weight ? current : best
+      );
+      
+      // 짧은 텍스트면 가벼운 애니메이션 우선
+      if (textLength < 10 && bestPattern.pattern.animations.includes('Idle_01.001')) {
+        selectedAnimation = Math.random() < 0.7 ? 'Idle_01.001' : randomSelectNonRepeat(bestPattern.pattern.animations);
+      } else {
+        selectedAnimation = randomSelectNonRepeat(bestPattern.pattern.animations);
+      }
+      
+      console.log(`📝 텍스트 분석: "${bestPattern.keyword}" 감지 (가중치: ${bestPattern.pattern.weight}) → ${selectedAnimation}`);
+    } else {
+      // 키워드가 없으면 감정 + 랜덤 요소
+      const emotionAnimationMap: Record<Emotion, string[]> = {
+        neutral: ['Idle_01.001'],
+        happy: ['smile.001', 'blush.001'],
+        sad: ['concern.001'],
+        angry: ['concern.001'],
+        surprised: ['blush.001', 'smile.001'],
+      };
+      
+      const candidates = emotionAnimationMap[emotion];
+      selectedAnimation = randomSelectNonRepeat(candidates);
+      
+      console.log(`🎭 감정 기반: ${emotion} → ${selectedAnimation} (랜덤 선택)`);
+    }
+    
+    // 이전 애니메이션 저장
+    lastAnimationRef.current = selectedAnimation;
+    
+    return selectedAnimation;
+  };
+
+  // GLB 애니메이션 전환 (감정 + 텍스트 기반)
+  useEffect(() => {
+    if (!isGLBModel || !glbActionsRef.current) return;
+    
+    // 최신 assistant 메시지 가져오기
+    const lastAssistantMessage = messages.length > 0 
+      ? [...messages].reverse().find(msg => msg.role === "assistant")
+      : null;
+    
+    // 텍스트 기반 애니메이션 선택
+    const targetAnimationName = lastAssistantMessage
+      ? selectAnimationFromText(lastAssistantMessage.content, currentEmotion)
+      : selectAnimationFromText("", currentEmotion);
+    
+    const targetAction = glbActionsRef.current[targetAnimationName];
+    
+    if (!targetAction) {
+      console.warn(`⚠️ 애니메이션을 찾을 수 없음: ${targetAnimationName}`);
+      return;
+    }
+    
+    // 현재 재생 중인 애니메이션과 같으면 전환하지 않음
+    if (currentGLBActionRef.current === targetAction) {
+      return;
+    }
+    
+    console.log(`🎬 애니메이션 전환: ${targetAnimationName}`);
+    
+    // 이전 애니메이션에서 새 애니메이션으로 부드럽게 전환
+    if (currentGLBActionRef.current) {
+      currentGLBActionRef.current.fadeOut(0.5); // 0.5초 페이드아웃
+    }
+    
+    targetAction.reset();
+    targetAction.fadeIn(0.5); // 0.5초 페이드인
+    targetAction.play();
+    
+    currentGLBActionRef.current = targetAction;
+  }, [currentEmotion, isGLBModel, messages]);
 
   // GLTF 씬을 그룹에 추가 + Skeleton 시각화
   useEffect(() => {
@@ -243,12 +570,12 @@ export default function Avatar() {
       gltf.scene.scale.set(1, 1, 1);
       groupRef.current.add(gltf.scene);
 
-      console.log("✅ VRM 씬이 그룹에 추가됨");
+      console.log("✅ 모델 씬이 그룹에 추가됨");
 
       // 🔍 1단계: Skeleton 시각화 및 본 이름 전체 출력
       // SkeletonHelper 제거됨 (이상한 선 제거)
     }
-  }, [gltf, selectedCharacter]);
+  }, [gltf, selectedCharacter, isGLBModel]);
 
   // emotion이 변경될 때 타겟 emotion 업데이트
   useEffect(() => {
@@ -561,12 +888,30 @@ export default function Avatar() {
 
   // ===== useFrame: 애니메이션 루프 =====
   useFrame((state, delta) => {
-    if (!vrm || !vrm.expressionManager || !vrmInitializedRef.current) {
+    if (!vrmInitializedRef.current) {
       return;
     }
 
     const time = state.clock.elapsedTime;
     const lerpSpeed = 3.0;
+
+    // ===== GLB 모델 처리 =====
+    if (isGLBModel && gltf) {
+      // AnimationMixer 업데이트 (GLB 애니메이션 재생)
+      if (mixerRef.current) {
+        mixerRef.current.update(delta);
+      }
+      
+      // GLB 모델의 립싱크 및 추가 애니메이션
+      // TODO: GLB 모델의 MorphTargets를 사용한 립싱크 구현
+      
+      return; // GLB 모델은 여기서 종료 (본 직접 조작 안 함)
+    }
+
+    // ===== VRM 모델 처리 =====
+    if (!vrm || !vrm.expressionManager) {
+      return;
+    }
 
     // 표정(BlendShape) 및 립싱크 로직
     // ===== 오디오 볼륨 계산 및 립싱크 준비 =====
@@ -852,8 +1197,96 @@ export default function Avatar() {
           }
         });
       } else if (selectedCharacter === "jinyoung") {
-        // ===== 루피 캐릭터 (본 조작 없음, 원본 유지) =====
-        // 루피는 VRM의 기본 포즈를 그대로 사용
+        // ===== 루피 캐릭터 A자 포즈 + 애니메이션 =====
+        vrm.scene.traverse((object: any) => {
+          if (!object.name) return;
+
+          // === 포즈 설정 ===
+          
+          // 왼쪽 어깨 - 자연스럽게
+          if (object.name === "J_Bip_L_Shoulder") {
+            object.rotation.z = 0;
+            if (object.parent) object.parent.updateWorldMatrix(true, false);
+            object.updateWorldMatrix(true, true);
+          }
+
+          // 왼팔 A자 포즈 (약 70도 아래로)
+          if (object.name === "J_Bip_L_UpperArm") {
+            const euler = new THREE.Euler(0, 0, Math.PI * 0.4, "XYZ");
+            object.quaternion.setFromEuler(euler);
+            if (object.parent) object.parent.updateWorldMatrix(true, false);
+            object.updateWorldMatrix(true, true);
+          }
+
+          // 왼팔꿈치 펼침
+          if (object.name === "J_Bip_L_LowerArm") {
+            object.rotation.set(0, 0, 0);
+            if (object.parent) object.parent.updateWorldMatrix(true, false);
+            object.updateWorldMatrix(true, true);
+          }
+
+          // 왼손 자연스럽게
+          if (object.name === "J_Bip_L_Hand") {
+            object.rotation.set(0, 0, 0);
+            if (object.parent) object.parent.updateWorldMatrix(true, false);
+            object.updateWorldMatrix(true, true);
+          }
+
+          // 오른쪽 어깨 - 자연스럽게
+          if (object.name === "J_Bip_R_Shoulder") {
+            object.rotation.z = 0;
+            if (object.parent) object.parent.updateWorldMatrix(true, false);
+            object.updateWorldMatrix(true, true);
+          }
+
+          // 오른팔 A자 포즈 (약 70도 아래로)
+          if (object.name === "J_Bip_R_UpperArm") {
+            const euler = new THREE.Euler(0, 0, -Math.PI * 0.4, "XYZ");
+            object.quaternion.setFromEuler(euler);
+            if (object.parent) object.parent.updateWorldMatrix(true, false);
+            object.updateWorldMatrix(true, true);
+          }
+
+          // 오른팔꿈치 펼침
+          if (object.name === "J_Bip_R_LowerArm") {
+            object.rotation.set(0, 0, 0);
+            if (object.parent) object.parent.updateWorldMatrix(true, false);
+            object.updateWorldMatrix(true, true);
+          }
+
+          // 오른손 자연스럽게
+          if (object.name === "J_Bip_R_Hand") {
+            object.rotation.set(0, 0, 0);
+            if (object.parent) object.parent.updateWorldMatrix(true, false);
+            object.updateWorldMatrix(true, true);
+          }
+
+          // === 루프 애니메이션 ===
+
+          // 호흡 애니메이션 (Spine 스케일)
+          if (object.name === "J_Bip_C_Spine") {
+            const breathScale = 1.0 + Math.sin(time * 0.8) * 0.008;
+            object.scale.set(breathScale, breathScale, breathScale);
+          }
+
+          // 가슴 호흡 (Chest)
+          if (object.name === "J_Bip_C_Chest") {
+            const chestScale = 1.0 + Math.sin(time * 0.8 + 0.3) * 0.01;
+            object.scale.set(chestScale, chestScale, chestScale);
+          }
+
+          // 미세한 좌우 흔들림 (UpperChest)
+          if (object.name === "J_Bip_C_UpperChest") {
+            const swayAngle = Math.sin(time * 0.6) * 0.015;
+            object.rotation.z = swayAngle;
+          }
+
+          // 머리 미세 움직임
+          if (object.name === "J_Bip_C_Head") {
+            const headSway = Math.sin(time * 0.7 + 0.5) * 0.02;
+            object.rotation.x = headSway;
+          }
+        });
       }
     }
   });
