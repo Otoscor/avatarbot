@@ -1303,8 +1303,47 @@ export default function Avatar() {
     }
   });
 
+  // 클릭 시 랜덤 애니메이션 재생
+  const handleAvatarClick = () => {
+    if (selectedCharacter === 'jinyoung' && glbActionsRef.current) {
+      console.log("🖱️ 루피 클릭됨!");
+      
+      // 사용 가능한 모든 애니메이션 목록
+      const availableAnimations = Object.keys(glbActionsRef.current);
+      console.log("사용 가능한 애니메이션:", availableAnimations);
+      
+      if (availableAnimations.length > 0) {
+        // 랜덤 애니메이션 선택
+        const randomIndex = Math.floor(Math.random() * availableAnimations.length);
+        const randomAnimation = availableAnimations[randomIndex];
+        
+        console.log(`🎲 랜덤 애니메이션 선택: ${randomAnimation}`);
+        
+        // 모든 애니메이션 중지
+        Object.values(glbActionsRef.current).forEach((action) => {
+          action.fadeOut(0.3);
+        });
+        
+        // 선택된 애니메이션 재생
+        const selectedAction = glbActionsRef.current[randomAnimation];
+        if (selectedAction) {
+          selectedAction.reset();
+          selectedAction.fadeIn(0.3);
+          selectedAction.play();
+          console.log(`✅ ${randomAnimation} 애니메이션 재생!`);
+        }
+      }
+    }
+  };
+
   return (
-    <group ref={groupRef} position={[0, 0, 0]}>
+    <group 
+      ref={groupRef} 
+      position={[0, 0, 0]}
+      onClick={handleAvatarClick}
+      onPointerOver={() => document.body.style.cursor = 'pointer'}
+      onPointerOut={() => document.body.style.cursor = 'default'}
+    >
       {/* VRM 모델이 여기에 추가됩니다 */}
     </group>
   );
