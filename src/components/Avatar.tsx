@@ -93,10 +93,10 @@ export default function Avatar() {
             // 감정별 애니메이션 매핑
             const emotionAnimationMap: Record<string, string> = {
               neutral: "Idle_01.001",
-              happy: "smile.001",
+              happy: "Idle_01.001",
               sad: "Idle_01.001",
               angry: "Idle_01.001",
-              surprised: "smile.001",
+              surprised: "Idle_01.001",
             };
             
             // 모든 애니메이션 액션 생성 및 저장
@@ -253,14 +253,14 @@ export default function Avatar() {
       // 미소/행복 관련 - 다양한 애니메이션 선택
       { 
         keywords: ['ㅎㅎ', 'ㅋㅋ', '완전', '좋아', '기쁘', '행복', '최고', '굿', '좋네', '멋지', '훌륭'],
-        animations: ['smile.001', 'blush.001'], // 웃음 + 수줍음 섞기
+        animations: ['Idle_01.001', 'blush.001'],
         weight: 3
       },
       
       // 강한 긍정 - 놀람과 미소 섞기
       { 
         keywords: ['대박', '신나', '즐거', '완벽', '끝내주', '짱', '와우'],
-        animations: ['blush.001', 'smile.001'],
+        animations: ['blush.001', 'Idle_01.001'],
         weight: 3
       },
       
@@ -288,7 +288,7 @@ export default function Avatar() {
       // 진지/확신 - 다양한 표현
       { 
         keywords: ['진짜', '정말', '확실', '분명', '당연'],
-        animations: ['smile.001', 'Idle_01.001', 'blush.001'],
+        animations: ['Idle_01.001', 'blush.001'],
         weight: 2
       },
       
@@ -302,7 +302,7 @@ export default function Avatar() {
       // 긍정/동의 응답
       { 
         keywords: ['그러', '그치', '응', '맞아', '네', '알겠'],
-        animations: ['Idle_01.001', 'smile.001'],
+        animations: ['Idle_01.001'],
         weight: 1
       },
     ];
@@ -339,10 +339,10 @@ export default function Avatar() {
       // 키워드가 없으면 감정 + 랜덤 요소
       const emotionAnimationMap: Record<Emotion, string[]> = {
         neutral: ['Idle_01.001'],
-        happy: ['smile.001'], // smile.001 복원
-        sad: ['Idle_01.001'], // concern.001 일시 중지
-        angry: ['Idle_01.001'], // concern.001 일시 중지
-        surprised: ['smile.001'],
+        happy: ['Idle_01.001'],
+        sad: ['Idle_01.001'],
+        angry: ['Idle_01.001'],
+        surprised: ['Idle_01.001'],
       };
       
       const candidates = emotionAnimationMap[emotion];
