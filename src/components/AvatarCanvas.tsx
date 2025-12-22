@@ -15,7 +15,15 @@ export default function AvatarCanvas() {
   const directionalIntensity = selectedCharacter === "jinyoung" ? 1.2 : 0.8; // 루피: 강한 햇빛
   
   return (
-    <div className="h-screen w-full">
+    <div 
+      className="h-screen w-full" 
+      style={{ 
+        position: 'fixed',
+        inset: 0,
+        overflow: 'hidden',
+        touchAction: 'none',
+      }}
+    >
       <Canvas
         camera={{ position: [0, 0.2, 0.8], fov: 55 }}
         gl={{ antialias: true }}

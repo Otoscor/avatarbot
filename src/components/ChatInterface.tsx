@@ -1093,6 +1093,7 @@ export default function ChatInterface() {
         style={{
           marginTop: "16px",
           marginRight: "20px", // px-5와 동일한 여백
+          touchAction: 'auto',
         }}
       >
         <button
@@ -1125,12 +1126,16 @@ export default function ChatInterface() {
             className="fixed inset-0 z-40 bg-black/50"
             style={{
               backdropFilter: "blur(4px)",
+              touchAction: 'auto',
             }}
             onClick={() => setShowCharacterModal(false)}
           />
 
           {/* 모달 */}
-          <div className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none">
+          <div 
+            className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none"
+            style={{ touchAction: 'none' }}
+          >
             <div
               className="pointer-events-auto"
               style={{
@@ -1146,6 +1151,7 @@ export default function ChatInterface() {
                 display: "flex",
                 flexDirection: "column",
                 gap: "24px",
+                touchAction: 'auto',
               }}
             >
               {/* 헤더 */}
@@ -1356,7 +1362,10 @@ export default function ChatInterface() {
       )}
       {/* 오디오 자동 재생 허용 모달 */}
       {showAudioPermissionModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm">
+        <div 
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm"
+          style={{ touchAction: 'auto' }}
+        >
           <div
             className="mx-4 max-w-sm rounded-2xl p-6 shadow-xl"
             style={{
@@ -1456,12 +1465,18 @@ export default function ChatInterface() {
           </div>
         </div>
       )}
-      <div className="fixed inset-0 pointer-events-none z-10 flex flex-col justify-end items-center px-3 sm:px-4">
-        {/* 듣는 중 인디케이터 / 답변 표시 */}
-        {((listeningState === "listening" && !isMuted) ||
-          isLoading ||
-          showMessage) && (
-          <div className="w-full pointer-events-none flex justify-center" style={{ marginBottom: "48px" }}>
+      {/* 듣는 중 인디케이터 / 답변 표시 */}
+      {((listeningState === "listening" && !isMuted) ||
+        isLoading ||
+        showMessage) && (
+        <div 
+          className="fixed left-0 right-0 pointer-events-none z-10 flex justify-center px-3 sm:px-4"
+          style={{ 
+            bottom: 'calc(56px + 48px + 48px)', // 입력창 높이(56px) + 하단 여백(48px) + 간격(48px)
+            touchAction: 'none'
+          }}
+        >
+          <div className="w-full pointer-events-none flex justify-center">
             <div
               className="inline-flex flex-col justify-center items-start"
               style={{
@@ -1555,12 +1570,13 @@ export default function ChatInterface() {
               ) : null}
             </div>
           </div>
-        )}
+        </div>
+      )}
 
-        {/* 입력창 영역 */}
+      {/* 입력창 영역 */}
         <div
-          className="w-full pointer-events-auto px-5"
-          style={{ marginBottom: "48px" }}
+          className="fixed bottom-0 left-0 right-0 w-full pointer-events-auto px-5 z-10"
+          style={{ marginBottom: "48px", touchAction: 'auto' }}
         >
           <div
             className="flex items-center transition-all duration-300 ease-in-out"
@@ -1729,7 +1745,6 @@ export default function ChatInterface() {
             </div>
           </div>
         </div>
-      </div>
     </>
   );
 }
