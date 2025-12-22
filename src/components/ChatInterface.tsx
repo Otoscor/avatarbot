@@ -164,6 +164,12 @@ export default function ChatInterface() {
       }
 
       const data = await response.json();
+      
+      console.log("=== ChatInterface: API 응답 받음 ===");
+      console.log("응답 텍스트:", data.text);
+      console.log("감정:", data.emotion);
+      console.log("오디오 있음:", !!data.audio);
+      console.log("오디오 길이:", data.audio?.length || 0);
 
       // 응답의 text를 채팅창에 추가
       addMessage({
@@ -196,8 +202,10 @@ export default function ChatInterface() {
 
       // audio 데이터 저장
       if (data.audio) {
+        console.log("✅ ChatInterface: 오디오 데이터 저장 중...");
         setAudio(data.audio);
       } else {
+        console.log("❌ ChatInterface: 오디오 데이터 없음");
         setAudio(null);
       }
     } catch (error) {
@@ -515,13 +523,10 @@ export default function ChatInterface() {
 
                   // audio 상태 업데이트
                   if (data.audio) {
-                    console.log(
-                      "오디오 데이터 설정:",
-                      data.audio.length > 0 ? "있음" : "없음"
-                    );
+                    console.log("✅ 오디오 데이터 저장:", data.audio.length, "bytes");
                     setAudio(data.audio);
                   } else {
-                    console.log("오디오 데이터 없음");
+                    console.log("❌ 오디오 데이터 없음");
                     setAudio(null);
                   }
 
@@ -638,13 +643,10 @@ export default function ChatInterface() {
 
                   // audio 상태 업데이트
                   if (data.audio) {
-                    console.log(
-                      "오디오 데이터 설정:",
-                      data.audio.length > 0 ? "있음" : "없음"
-                    );
+                    console.log("✅ 오디오 데이터 저장:", data.audio.length, "bytes");
                     setAudio(data.audio);
                   } else {
-                    console.log("오디오 데이터 없음");
+                    console.log("❌ 오디오 데이터 없음");
                     setAudio(null);
                   }
 

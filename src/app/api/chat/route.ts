@@ -144,6 +144,11 @@ export async function POST(request: NextRequest) {
     // TTS를 사용하여 음성 생성
     let audioBase64 = "";
     try {
+      console.log("=== TTS 생성 시작 ===");
+      console.log("캐릭터:", selectedCharacter);
+      console.log("음성:", selectedVoice);
+      console.log("텍스트:", text);
+      
       const ttsResponse = await openai.audio.speech.create({
         model: "tts-1-hd", // HD 품질
         voice: selectedVoice,
@@ -153,8 +158,10 @@ export async function POST(request: NextRequest) {
 
       const audioBuffer = Buffer.from(await ttsResponse.arrayBuffer());
       audioBase64 = audioBuffer.toString("base64");
+      
+      console.log("✅ TTS 생성 성공! 오디오 길이:", audioBase64.length);
     } catch (ttsError) {
-      console.error("TTS 생성 오류:", ttsError);
+      console.error("❌ TTS 생성 오류:", ttsError);
       // TTS 실패해도 텍스트 응답은 반환
     }
 

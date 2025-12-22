@@ -630,19 +630,28 @@ export default function Avatar() {
 
   // 오디오 재생 및 립싱크 설정
   useEffect(() => {
-    console.log("Avatar: 오디오 재생 시도", {
+    console.log("=== Avatar: 오디오 재생 시도 ===", {
       hasAudio: !!currentAudio,
       audioLength: currentAudio?.length,
       hasVrm: !!vrm,
       isGLBModel: isGLBModel,
       hasGltf: !!gltf,
+      selectedCharacter: selectedCharacter,
     });
 
-    // VRM 모델이거나 GLB 모델이면 오디오 재생 가능
-    if (!currentAudio || (!vrm && !isGLBModel)) {
-      console.log("Avatar: 오디오가 없거나 모델이 로드되지 않아서 재생하지 않음");
+    // 오디오가 없으면 재생 불가
+    if (!currentAudio) {
+      console.log("❌ Avatar: 오디오 데이터가 없어서 재생하지 않음");
       return;
     }
+
+    // VRM 모델도 없고 GLB 모델도 아니면 재생 불가
+    if (!vrm && !isGLBModel) {
+      console.log("❌ Avatar: 모델이 로드되지 않아서 재생하지 않음 (vrm:", !!vrm, "isGLBModel:", isGLBModel, ")");
+      return;
+    }
+
+    console.log("✅ Avatar: 오디오 재생 조건 충족! 재생 시작...")
 
     // 기존 오디오 정리
     if (audioRef.current) {
