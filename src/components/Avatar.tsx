@@ -456,8 +456,9 @@ export default function Avatar() {
       setAudioPlaying(false);
 
       // 모든 표정 및 립싱크 BlendShape 즉시 리셋
-      if (vrm && vrm.expressionManager) {
-        vrm.expressionManager.expressions.forEach((expression) => {
+      if (vrm?.expressionManager) {
+        const expressionManager = vrm.expressionManager;
+        expressionManager.expressions.forEach((expression) => {
           const nameLower = expression.expressionName.toLowerCase();
           
           // 립싱크 관련 BlendShape 0으로
@@ -467,7 +468,7 @@ export default function Avatar() {
             nameLower.includes("mouth") || 
             nameLower.includes("lip")
           ) {
-            vrm.expressionManager.setValue(expression.expressionName, 0);
+            expressionManager.setValue(expression.expressionName, 0);
             blendShapeWeightsRef.current[expression.expressionName] = 0;
           }
           
@@ -476,13 +477,13 @@ export default function Avatar() {
             ["blink", "blinkleft", "blinkright"].includes(nameLower) ||
             nameLower.includes("blink")
           ) {
-            vrm.expressionManager.setValue(expression.expressionName, 0);
+            expressionManager.setValue(expression.expressionName, 0);
             blendShapeWeightsRef.current[expression.expressionName] = 0;
           }
         });
         
         // 표정을 neutral로 리셋
-        vrm.expressionManager.setValue("neutral", 1.0);
+        expressionManager.setValue("neutral", 1.0);
         blendShapeWeightsRef.current["neutral"] = 1.0;
       }
       
@@ -524,8 +525,9 @@ export default function Avatar() {
       setAudioPlaying(false);
       
       // cleanup 시에도 모든 BlendShape 리셋
-      if (vrm && vrm.expressionManager) {
-        vrm.expressionManager.expressions.forEach((expression) => {
+      if (vrm?.expressionManager) {
+        const expressionManager = vrm.expressionManager;
+        expressionManager.expressions.forEach((expression) => {
           const nameLower = expression.expressionName.toLowerCase();
           
           // 립싱크 및 눈 깜빡임 리셋
@@ -537,7 +539,7 @@ export default function Avatar() {
             ["blink", "blinkleft", "blinkright"].includes(nameLower) ||
             nameLower.includes("blink")
           ) {
-            vrm.expressionManager.setValue(expression.expressionName, 0);
+            expressionManager.setValue(expression.expressionName, 0);
             if (blendShapeWeightsRef.current) {
               blendShapeWeightsRef.current[expression.expressionName] = 0;
             }
@@ -545,7 +547,7 @@ export default function Avatar() {
         });
         
         // neutral 표정으로
-        vrm.expressionManager.setValue("neutral", 1.0);
+        expressionManager.setValue("neutral", 1.0);
         if (blendShapeWeightsRef.current) {
           blendShapeWeightsRef.current["neutral"] = 1.0;
         }
