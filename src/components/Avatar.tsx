@@ -722,13 +722,21 @@ export default function Avatar() {
     console.log("Avatar: 오디오 재생 시작");
     const playAudio = async () => {
       try {
-        // AudioContext 활성화
+        // AudioContext 활성화 (모바일 환경에서 중요)
         if (audioContextRef.current?.state === "suspended") {
+          console.log("Avatar: AudioContext suspended, 재개 시도...");
           await audioContextRef.current.resume();
+          console.log("Avatar: AudioContext 재개됨, 상태:", audioContextRef.current.state);
+        }
+        
+        // 모바일 환경에서 추가 대기
+        if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
+          await new Promise(resolve => setTimeout(resolve, 100));
         }
         
         // 오디오가 충분히 로드될 때까지 대기
         if (audio.readyState < 3) { // HAVE_FUTURE_DATA
+          console.log("Avatar: 오디오 로딩 대기 중... readyState:", audio.readyState);
           await new Promise((resolve) => {
             audio.addEventListener("canplay", resolve, { once: true });
           });

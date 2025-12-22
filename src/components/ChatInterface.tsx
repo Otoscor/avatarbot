@@ -75,6 +75,10 @@ export default function ChatInterface() {
     useState<ListeningState>("listening");
   const [hasPermissionDenied, setHasPermissionDenied] = useState(false); // 권한 거부 상태
   const [showPermissionToast, setShowPermissionToast] = useState(false); // 권한 토스트 표시 여부
+  
+  // 모바일 환경 감지
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+  const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const autoRestartRef = useRef<boolean>(false); // 자동 재시작 플래그
@@ -377,6 +381,13 @@ export default function ChatInterface() {
 
   // 음성 인식 초기화
   useEffect(() => {
+    // iOS Safari는 Web Speech API를 지원하지 않으므로 초기화하지 않음
+    if (isIOS) {
+      console.warn("iOS Safari는 음성 인식을 지원하지 않습니다. 텍스트 입력을 사용하세요.");
+      setIsMuted(true); // iOS에서는 기본적으로 음소거 상태로 시작
+      return;
+    }
+    
     // 브라우저 호환성 확인
     const SpeechRecognition =
       window.SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -1915,6 +1926,31 @@ export default function ChatInterface() {
           </div>
         </div>
       )}
+      {/* iOS 음성인식 미지원 토스트 */}
+      {isIOS && !isMuted && (
+        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 pointer-events-none">
+          <div
+            className="inline-flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg max-w-xs"
+            style={{
+              background: "rgba(0, 0, 0, 0.9)",
+              backdropFilter: "blur(10px)",
+            }}
+          >
+            <span
+              style={{
+                color: "#FFF",
+                fontFamily: '"Pretendard Variable", Pretendard, sans-serif',
+                fontSize: "13px",
+                fontWeight: 400,
+                textAlign: "center",
+              }}
+            >
+              iOS에서는 음성 인식이 지원되지 않습니다. 텍스트로 입력해주세요.
+            </span>
+          </div>
+        </div>
+      )}
+      
       {/* 권한 거부 토스트 메시지 */}
       {showPermissionToast && (
         <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 pointer-events-none">
