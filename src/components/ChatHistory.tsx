@@ -144,10 +144,10 @@ export default function ChatHistory() {
           style={{
             color: "#1D1D1D",
             fontFamily: '"Pretendard Variable", Pretendard, sans-serif',
-            fontSize: "20px",
+            fontSize: "22px",
             fontWeight: 600,
             lineHeight: "56px", // 버튼 높이와 동일하게 설정하여 수직 중앙 정렬
-            letterSpacing: "-0.4px",
+            letterSpacing: "0px",
           }}
         >
           {CHARACTER_NAMES[selectedCharacter]}
