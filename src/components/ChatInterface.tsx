@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useChatStore } from "@/store/useChatStore";
-import { ArrowUp, Mic, MicOff, X, Check, LayoutGrid } from "lucide-react";
+import { ArrowUp, Mic, MicOff, X, Check, LayoutGrid, MessageSquareText } from "lucide-react";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 
 // Web Speech API 타입 정의
 interface SpeechRecognition extends EventTarget {
@@ -63,9 +64,11 @@ declare global {
 type ListeningState = "listening" | "speaking" | "processing" | "ai-speaking";
 
 export default function ChatInterface() {
+  const router = useRouter();
   const [inputValue, setInputValue] = useState("");
   const [isListening, setIsListening] = useState(false);
   const [isMuted, setIsMuted] = useState(false); // 음소거 상태
+  const [isFocused, setIsFocused] = useState(false); // 입력창 포커스 상태
   const [listeningState, setListeningState] =
     useState<ListeningState>("listening");
   const [hasPermissionDenied, setHasPermissionDenied] = useState(false); // 권한 거부 상태
@@ -1654,12 +1657,12 @@ export default function ChatInterface() {
               )}
             </button>
 
-            {/* 인풋 필드 (Submit 버튼 포함) */}
+            {/* 인풋 필드 */}
             <div
               className="flex items-center flex-1 transition-all duration-300 ease-in-out"
               style={{
                 height: "56px",
-                padding: "8px 4px 8px 12px",
+                padding: "8px 12px",
                 gap: "16px",
                 borderRadius: "16px",
                 border: "1.5px solid #D3D3D3",
@@ -1677,36 +1680,66 @@ export default function ChatInterface() {
                     stopRecognition();
                     autoRestartRef.current = false;
                   }
+                  setIsFocused(true);
                 }}
-                placeholder="무엇이든 물어보세요"
+                onBlur={() => {
+                  setIsFocused(false);
+                }}
+                placeholder="무엇이든지 물어보세요."
                 className="flex-1 bg-transparent text-[#1d1d1d] placeholder-[#1d1d1d]/60 resize-none outline-none text-sm leading-relaxed max-h-32 scrollbar-hide"
                 rows={1}
                 disabled={isLoading || isAudioPlaying}
-              />
-              {/* Submit 버튼 (인풋 안에) */}
-              <button
-                onClick={handleSend}
-                disabled={
-                  !inputValue.trim() ||
-                  isLoading ||
-                  isAudioPlaying
-                }
-                className="flex justify-center items-center flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
                 style={{
-                  width: "48px",
-                  height: "48px",
-                  padding: "0 12px",
-                  gap: "4px",
-                  borderRadius: "12px",
-                  background:
-                    "linear-gradient(180deg, #8569F2 0%, #5A35EC 100%)",
-                  boxShadow: "0 2px 4px 0 rgba(255, 255, 255, 0.25) inset",
+                  fontFamily: '"Pretendard Variable", Pretendard, sans-serif',
                 }}
-                title="전송"
-              >
-                <ArrowUp className="w-6 h-6 text-white" />
-              </button>
+              />
             </div>
+
+            {/* 대화 버튼 / 전송 버튼 전환 */}
+            <button
+              onClick={() => {
+                if (isFocused || inputValue.trim()) {
+                  // 포커스 중이거나 텍스트가 있으면 전송
+                  handleSend();
+                } else {
+                  // 그 외에는 채팅 화면으로 이동
+                  router.push("/chat");
+                }
+              }}
+              disabled={isLoading || isAudioPlaying || (isFocused && !inputValue.trim())}
+              className="flex justify-center items-center flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+              style={{
+                minWidth: "56px",
+                height: "56px",
+                padding: isFocused || inputValue.trim() ? "0 12px" : "0 16px",
+                gap: "4px",
+                borderRadius: "16px",
+                background:
+                  "linear-gradient(180deg, #8569F2 0%, #5A35EC 100%)",
+                boxShadow: "0 2px 4px 0 rgba(255, 255, 255, 0.25) inset",
+                fontFamily: '"Pretendard Variable", Pretendard, sans-serif',
+              }}
+              title={isFocused || inputValue.trim() ? "전송" : "대화"}
+            >
+              {isFocused || inputValue.trim() ? (
+                <ArrowUp className="w-6 h-6 text-white" />
+              ) : (
+                <div className="flex items-center gap-2">
+                  <MessageSquareText className="w-5 h-5 text-white" />
+                  <span
+                    style={{
+                      color: "#FFF",
+                      fontSize: "16px",
+                      fontWeight: 600,
+                      lineHeight: "24px",
+                      letterSpacing: "-0.32px",
+                    }}
+                  >
+                    대화
+                  </span>
+                </div>
+              )}
+            </button>
           </div>
         </div>
       </div>
