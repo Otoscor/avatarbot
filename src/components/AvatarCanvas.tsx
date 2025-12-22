@@ -8,9 +8,10 @@ import { useChatStore } from "@/store/useChatStore";
 
 export default function AvatarCanvas() {
   const selectedCharacter = useChatStore((state) => state.selectedCharacter);
+  const selectedBackground = useChatStore((state) => state.selectedBackground);
   
   // 캐릭터별 환경 설정
-  const environmentPreset = "apartment"; // 모든 캐릭터: 실내 배경
+  const environmentPreset = selectedBackground as any; // store에서 가져온 배경 사용
   const ambientIntensity = selectedCharacter === "jinyoung" ? 0.8 : 0.4; // 루피: 밝은 반사광
   const directionalIntensity = selectedCharacter === "jinyoung" ? 1.2 : 0.8; // 루피: 강한 햇빛
   

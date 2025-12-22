@@ -16,12 +16,14 @@ interface ChatStore {
   currentAudio: string | null; // base64 인코딩된 오디오 데이터
   isAudioPlaying: boolean; // 오디오 재생 중 여부
   selectedCharacter: string; // 선택된 캐릭터 ("test" 또는 "jinyoung")
+  selectedBackground: string; // 선택된 배경 ("apartment" 또는 "forest")
   addMessage: (message: Omit<Message, "id" | "timestamp">) => void;
   setLoading: (loading: boolean) => void;
   setEmotion: (emotion: Emotion) => void;
   setAudio: (audio: string | null) => void;
   setAudioPlaying: (playing: boolean) => void;
   setSelectedCharacter: (character: string) => void;
+  setSelectedBackground: (background: string) => void;
   clearMessages: () => void;
 }
 
@@ -32,6 +34,7 @@ export const useChatStore = create<ChatStore>((set) => ({
   currentAudio: null,
   isAudioPlaying: false,
   selectedCharacter: "jinyoung", // 기본값: 루피
+  selectedBackground: "apartment", // 기본값: apartment
   addMessage: (message) =>
     set((state) => ({
       messages: [
@@ -48,5 +51,6 @@ export const useChatStore = create<ChatStore>((set) => ({
   setAudio: (audio) => set({ currentAudio: audio }),
   setAudioPlaying: (playing) => set({ isAudioPlaying: playing }),
   setSelectedCharacter: (character) => set({ selectedCharacter: character }),
+  setSelectedBackground: (background) => set({ selectedBackground: background }),
   clearMessages: () => set({ messages: [] }),
 }));

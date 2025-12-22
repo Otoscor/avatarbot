@@ -88,7 +88,6 @@ export default function ChatInterface() {
   const [audioContextUnlocked, setAudioContextUnlocked] = useState(false); // 오디오 컨텍스트 활성화 여부
   const [showCharacterModal, setShowCharacterModal] = useState(false); // 캐릭터 선택 모달
   const [showBackgroundModal, setShowBackgroundModal] = useState(false); // 배경 선택 모달
-  const [selectedBackground, setSelectedBackground] = useState("apartment"); // 선택된 배경
   const [showComingSoonToast, setShowComingSoonToast] = useState(false); // 준비 중 토스트
   const permissionDeniedRef = useRef<boolean>(false); // 권한 거부 ref (재시도 방지용)
   const audioContextRef = useRef<AudioContext | null>(null); // 오디오 컨텍스트 ref
@@ -98,11 +97,13 @@ export default function ChatInterface() {
     isLoading,
     isAudioPlaying,
     selectedCharacter,
+    selectedBackground,
     addMessage,
     setLoading,
     setEmotion,
     setAudio,
     setSelectedCharacter,
+    setSelectedBackground,
   } = useChatStore();
 
   // 현재 표시할 메시지 (가장 최근 assistant 메시지)
