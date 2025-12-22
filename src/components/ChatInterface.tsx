@@ -177,7 +177,7 @@ export default function ChatInterface() {
         role: "assistant",
       });
 
-      // 답변 표시 시작
+      // 답변 표시 시작 (TTS 재생 중에는 계속 표시)
       setShowMessage(true);
 
       // 기존 타이머 정리
@@ -185,10 +185,7 @@ export default function ChatInterface() {
         clearTimeout(messageDisplayTimerRef.current);
       }
 
-      // 5초 후 답변 숨기기
-      messageDisplayTimerRef.current = setTimeout(() => {
-        setShowMessage(false);
-      }, 5000);
+      // 타이머는 TTS 종료 시 설정 (여기서는 설정하지 않음)
 
       // emotion 상태 업데이트
       if (
@@ -507,7 +504,7 @@ export default function ChatInterface() {
                       content: data.text,
                     });
 
-                    // 답변 표시 시작
+                    // 답변 표시 시작 (TTS 재생 중에는 계속 표시)
                     setShowMessage(true);
 
                     // 기존 타이머 정리
@@ -515,10 +512,7 @@ export default function ChatInterface() {
                       clearTimeout(messageDisplayTimerRef.current);
                     }
 
-                    // 5초 후 답변 숨김
-                    messageDisplayTimerRef.current = setTimeout(() => {
-                      setShowMessage(false);
-                    }, 5000);
+                    // 타이머는 TTS 종료 시 설정
                   }
 
                   // emotion 상태 업데이트
@@ -627,7 +621,7 @@ export default function ChatInterface() {
                       content: data.text,
                     });
 
-                    // 답변 표시 시작
+                    // 답변 표시 시작 (TTS 재생 중에는 계속 표시)
                     setShowMessage(true);
 
                     // 기존 타이머 정리
@@ -635,10 +629,7 @@ export default function ChatInterface() {
                       clearTimeout(messageDisplayTimerRef.current);
                     }
 
-                    // 5초 후 답변 숨김
-                    messageDisplayTimerRef.current = setTimeout(() => {
-                      setShowMessage(false);
-                    }, 5000);
+                    // 타이머는 TTS 종료 시 설정
                   }
 
                   // emotion 상태 업데이트
@@ -734,15 +725,15 @@ export default function ChatInterface() {
                       content: data.text,
                     });
 
+                    // 답변 표시 시작 (TTS 재생 중에는 계속 표시)
                     setShowMessage(true);
 
+                    // 기존 타이머 정리
                     if (messageDisplayTimerRef.current) {
                       clearTimeout(messageDisplayTimerRef.current);
                     }
 
-                    messageDisplayTimerRef.current = setTimeout(() => {
-                      setShowMessage(false);
-                    }, 5000);
+                    // 타이머는 TTS 종료 시 설정
                   }
 
                   if (data.emotion) {
@@ -961,7 +952,7 @@ export default function ChatInterface() {
     };
   }, [resetSilenceTimer, startRecognition, isMuted, checkMicrophonePermission]);
 
-  // ref 업데이트 및 TTS 종료 후 음성 인식 재시작
+  // ref 업데이트 및 TTS 종료 후 음성 인식 재시작 + 자막 숨김
   useEffect(() => {
     const wasPlaying = isAudioPlayingRef.current;
     isAudioPlayingRef.current = isAudioPlaying;
@@ -969,6 +960,15 @@ export default function ChatInterface() {
     // TTS 재생이 끝났을 때 (true → false)
     if (wasPlaying && !isAudioPlaying) {
       console.log("🎤 TTS 재생 종료, 음성 인식 재시작 대기...");
+      
+      // 자막을 2초 후에 숨김 (사용자가 읽을 시간 확보)
+      if (messageDisplayTimerRef.current) {
+        clearTimeout(messageDisplayTimerRef.current);
+      }
+      messageDisplayTimerRef.current = setTimeout(() => {
+        setShowMessage(false);
+      }, 2000);
+      
       // 충분한 지연 후 음성 인식 재시작
       setTimeout(() => {
         if (
