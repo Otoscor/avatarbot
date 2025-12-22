@@ -110,7 +110,7 @@ export default function Avatar() {
             // 감정별 애니메이션 매핑
             const emotionAnimationMap: Record<string, string> = {
               neutral: "Idle_01.001",
-              happy: "smile.001",
+              happy: "Idle_01.001", // smile.001 일시 중지, 기본 자세 사용
               sad: "concern.001",
               angry: "concern.001",
               surprised: "smile.001", // blush.001 대신 smile.001 사용
@@ -487,7 +487,7 @@ export default function Avatar() {
       // 키워드가 없으면 감정 + 랜덤 요소
       const emotionAnimationMap: Record<Emotion, string[]> = {
         neutral: ['Idle_01.001'],
-        happy: ['smile.001'], // blush.001 제거
+        happy: ['Idle_01.001'], // smile.001 일시 중지, 기본 자세 사용
         sad: ['concern.001'],
         angry: ['concern.001'],
         surprised: ['smile.001'], // blush.001 제거
