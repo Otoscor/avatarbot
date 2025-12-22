@@ -151,10 +151,10 @@ export async function POST(request: NextRequest) {
         happy: "happy",
         sad: "sad",
         angry: "angry",
-        neutral: "neutral",
-        surprised: "surprised",
+        neutral: "normal", // Typecast는 "normal" 사용
+        surprised: "happy", // surprised는 happy로 매핑
       };
-      return emotionMap[emotion] || "neutral";
+      return emotionMap[emotion] || "normal";
     };
 
     // TTS를 사용하여 음성 생성
@@ -170,29 +170,32 @@ export async function POST(request: NextRequest) {
       console.log("텍스트:", text);
 
       if (useTypecast) {
-        // Typecast TTS 사용
-        console.log("Typecast Actor ID:", typecastActorId);
+        // Typecast TTS 사용 (공식 API v1)
+        console.log("Typecast Voice ID:", typecastActorId);
         console.log("감정:", parsedResponse.emotion);
 
         const ttsResponse = await axios.post(
-          "https://typecast.ai/api/speak",
+          "https://api.typecast.ai/v1/text-to-speech",
           {
-            actor_id: typecastActorId,
+            voice_id: typecastActorId,
             text: text,
-            lang: "ko-KR",
-            tempo: selectedCharacter === "jinyoung" ? 1.05 : 1.0, // 루피는 약간 빠르게
-            volume: 100,
-            pitch: selectedCharacter === "jinyoung" ? 1 : 0, // 루피는 약간 높게
-            xapi_hd: true,
-            max_seconds: 60,
-            style_properties: {
-              emotion: mapEmotionToTypecast(parsedResponse.emotion),
-              emotion_strength: 0.7,
+            model: "ssfm-v21", // 최신 모델
+            language: "kor", // 한국어
+            prompt: {
+              emotion_preset: mapEmotionToTypecast(parsedResponse.emotion),
+              emotion_intensity: 0.7,
             },
+            output: {
+              volume: 100,
+              audio_pitch: selectedCharacter === "jinyoung" ? 1 : 0, // 루피는 약간 높게
+              audio_tempo: selectedCharacter === "jinyoung" ? 1.05 : 1.0, // 루피는 약간 빠르게
+              audio_format: "mp3", // MP3 형식
+            },
+            seed: 42, // 일관성을 위한 시드값
           },
           {
             headers: {
-              Authorization: `Bearer ${typecastApiKey}`,
+              "X-API-KEY": typecastApiKey,
               "Content-Type": "application/json",
             },
             responseType: "arraybuffer",
