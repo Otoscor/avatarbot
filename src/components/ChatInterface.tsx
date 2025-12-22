@@ -1050,6 +1050,68 @@ export default function ChatInterface() {
     setShowAudioPermissionModal(false);
   }, []);
 
+  // 초기 인사말 (처음 마운트 시 한 번만)
+  useEffect(() => {
+    const hasGreeted = sessionStorage.getItem('hasGreeted');
+    
+    if (!hasGreeted && selectedCharacter === 'jinyoung') {
+      // 세션 중 한 번만 인사
+      sessionStorage.setItem('hasGreeted', 'true');
+      
+      // 약간의 지연 후 인사 (페이지 로드 완료 대기)
+      setTimeout(async () => {
+        const greetingText = "만나서 반가워요! 오늘의 대화 주제는 뭐에요?";
+        
+        // 루피의 인사말 메시지 추가
+        addMessage({
+          role: "assistant",
+          content: greetingText,
+        });
+        
+        // 감정을 happy로 설정 (smile.001 애니메이션)
+        setEmotion("happy");
+        
+        // 자막 표시
+        setShowMessage(true);
+        
+        // TTS 생성 (API 호출)
+        try {
+          const response = await fetch("/api/chat", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({
+              messages: [
+                {
+                  role: "system",
+                  content: "사용자에게 첫 인사를 합니다.",
+                },
+                {
+                  role: "assistant",
+                  content: greetingText,
+                },
+              ],
+              character: "jinyoung",
+              greeting: true, // 인사말 플래그
+            }),
+          });
+          
+          if (response.ok) {
+            const data = await response.json();
+            
+            // 오디오만 설정 (메시지는 이미 추가됨)
+            if (data.audio) {
+              setAudio(data.audio);
+            }
+          }
+        } catch (error) {
+          console.error("초기 인사말 TTS 생성 실패:", error);
+        }
+      }, 1500); // 1.5초 후 인사
+    }
+  }, [selectedCharacter, addMessage, setEmotion, setAudio]);
+
   // 컴포넌트 언마운트 시 타이머 정리
   useEffect(() => {
     return () => {

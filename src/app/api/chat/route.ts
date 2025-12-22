@@ -8,13 +8,76 @@ const openai = new OpenAI({
 
 export async function POST(request: NextRequest) {
   try {
-    const { messages, character } = await request.json();
+    const { messages, character, greeting } = await request.json();
 
     if (!process.env.OPENAI_API_KEY) {
       return NextResponse.json(
         { error: "OpenAI API key is not configured" },
         { status: 500 }
       );
+    }
+    
+    // 인사말인 경우 GPT 호출 없이 TTS만 생성
+    if (greeting) {
+      const greetingText = "만나서 반가워요! 오늘의 대화 주제는 뭐에요?";
+      const selectedCharacter = character || "jinyoung";
+      
+      // TTS 생성 부분으로 바로 이동
+      const typecastActorMap: { [key: string]: string | undefined } = {
+        test: process.env.TYPECAST_ACTOR_ID_SEOA,
+        jinyoung: process.env.TYPECAST_ACTOR_ID_LUPY,
+      };
+      
+      const typecastApiKey = process.env.TYPECAST_API_KEY;
+      const typecastActorId = typecastActorMap[selectedCharacter];
+      const useTypecast = typecastApiKey && typecastActorId;
+      
+      let audioBase64 = "";
+      
+      try {
+        if (useTypecast) {
+          console.log("=== 인사말 Typecast TTS 생성 ===");
+          const ttsResponse = await axios.post(
+            "https://api.typecast.ai/v1/text-to-speech",
+            {
+              voice_id: typecastActorId,
+              text: greetingText,
+              model: "ssfm-v21",
+              language: "kor",
+              prompt: {
+                emotion_preset: "happy",
+                emotion_intensity: 0.8,
+              },
+              output: {
+                volume: 100,
+                audio_pitch: 1,
+                audio_tempo: 1.05,
+                audio_format: "mp3",
+              },
+              seed: 42,
+            },
+            {
+              headers: {
+                "X-API-KEY": typecastApiKey,
+                "Content-Type": "application/json",
+              },
+              responseType: "arraybuffer",
+              timeout: 30000,
+            }
+          );
+          
+          audioBase64 = Buffer.from(ttsResponse.data).toString("base64");
+          console.log("✅ 인사말 TTS 생성 성공!");
+        }
+      } catch (error) {
+        console.error("인사말 TTS 생성 실패:", error);
+      }
+      
+      return NextResponse.json({
+        text: greetingText,
+        emotion: "happy",
+        audio: audioBase64,
+      });
     }
 
     // 캐릭터별 시스템 메시지 정의
