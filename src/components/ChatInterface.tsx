@@ -1258,15 +1258,19 @@ export default function ChatInterface() {
         </div>
       )}
 
-      {/* 우상단 캐릭터 선택 버튼 */}
+      {/* 우상단 버튼들 */}
       <div
         className="fixed top-0 right-0 z-20 pointer-events-auto"
         style={{
           marginTop: "16px",
           marginRight: "20px", // px-5와 동일한 여백
           touchAction: 'auto',
+          display: "flex",
+          flexDirection: "column",
+          gap: "32px", // 버튼 간 간격
         }}
       >
+        {/* 캐릭터 선택 버튼 */}
         <button
           style={{
             display: "flex",
@@ -1283,6 +1287,27 @@ export default function ChatInterface() {
           }}
           onClick={() => {
             setShowCharacterModal(true);
+          }}
+        >
+          <LayoutGrid className="w-6 h-6 text-[#1d1d1d]" fill="currentColor" />
+        </button>
+
+        {/* 두 번째 버튼 (비활성화) */}
+        <button
+          disabled
+          style={{
+            display: "flex",
+            width: "56px",
+            height: "56px",
+            padding: "10px",
+            justifyContent: "center",
+            alignItems: "center",
+            gap: "10px",
+            borderRadius: "12px",
+            background: "#FFF",
+            border: "none",
+            cursor: "not-allowed",
+            opacity: 0.5, // 비활성화 표시
           }}
         >
           <LayoutGrid className="w-6 h-6 text-[#1d1d1d]" fill="currentColor" />
