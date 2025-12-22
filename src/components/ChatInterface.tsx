@@ -87,6 +87,8 @@ export default function ChatInterface() {
     useState(false); // 오디오 자동 재생 허용 모달
   const [audioContextUnlocked, setAudioContextUnlocked] = useState(false); // 오디오 컨텍스트 활성화 여부
   const [showCharacterModal, setShowCharacterModal] = useState(false); // 캐릭터 선택 모달
+  const [showBackgroundModal, setShowBackgroundModal] = useState(false); // 배경 선택 모달
+  const [selectedBackground, setSelectedBackground] = useState("apartment"); // 선택된 배경
   const [showComingSoonToast, setShowComingSoonToast] = useState(false); // 준비 중 토스트
   const permissionDeniedRef = useRef<boolean>(false); // 권한 거부 ref (재시도 방지용)
   const audioContextRef = useRef<AudioContext | null>(null); // 오디오 컨텍스트 ref
@@ -1292,9 +1294,8 @@ export default function ChatInterface() {
           <LayoutGrid className="w-6 h-6 text-[#1d1d1d]" fill="currentColor" />
         </button>
 
-        {/* 두 번째 버튼 (비활성화) */}
+        {/* 배경 선택 버튼 */}
         <button
-          disabled
           style={{
             display: "flex",
             width: "56px",
@@ -1306,8 +1307,10 @@ export default function ChatInterface() {
             borderRadius: "12px",
             background: "#FFF",
             border: "none",
-            cursor: "not-allowed",
-            opacity: 0.5, // 비활성화 표시
+            cursor: "pointer",
+          }}
+          onClick={() => {
+            setShowBackgroundModal(true);
           }}
         >
           <Shirt className="w-6 h-6 text-[#1d1d1d]" fill="currentColor" />
@@ -1556,6 +1559,290 @@ export default function ChatInterface() {
           </div>
         </>
       )}
+
+      {/* 배경 선택 모달 */}
+      {showBackgroundModal && (
+        <>
+          {/* Dimmed 배경 */}
+          <div
+            className="fixed inset-0 z-40 bg-black/50"
+            style={{
+              backdropFilter: "blur(4px)",
+              touchAction: 'auto',
+            }}
+            onClick={() => setShowBackgroundModal(false)}
+          />
+
+          {/* 모달 */}
+          <div 
+            className="fixed inset-0 z-50 flex items-center justify-center pointer-events-none"
+            style={{ touchAction: 'none' }}
+          >
+            <div
+              className="pointer-events-auto"
+              style={{
+                width: "80vw",
+                height: "80vw",
+                maxWidth: "600px",
+                maxHeight: "600px",
+                borderRadius: "24px",
+                border: "1px solid rgba(255, 255, 255, 0.40)",
+                background: "#FFF",
+                backdropFilter: "blur(10px)",
+                padding: "24px",
+                display: "flex",
+                flexDirection: "column",
+                gap: "24px",
+                touchAction: 'auto',
+              }}
+            >
+              {/* 헤더 */}
+              <div
+                style={{
+                  display: "flex",
+                  width: "100%",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                }}
+              >
+                {/* 왼쪽 타이틀 */}
+                <h3
+                  style={{
+                    color: "#1D1D1D",
+                    fontFamily:
+                      '"Noto Sans KR", "Pretendard Variable", Pretendard, sans-serif',
+                    fontSize: "20px",
+                    fontStyle: "normal",
+                    fontWeight: 500,
+                    lineHeight: "24px",
+                    letterSpacing: "-0.4px",
+                    margin: 0,
+                  }}
+                >
+                  스타일 변경
+                </h3>
+
+                {/* 오른쪽 X 버튼 */}
+                <button
+                  style={{
+                    display: "flex",
+                    width: "44px",
+                    height: "44px",
+                    padding: "10px",
+                    justifyContent: "center",
+                    alignItems: "center",
+                    gap: "10px",
+                    flexShrink: 0,
+                    borderRadius: "12px",
+                    border: "1px solid #EEE",
+                    background: "#FAFAFA",
+                    cursor: "pointer",
+                  }}
+                  onClick={() => setShowBackgroundModal(false)}
+                >
+                  <X size={24} color="#1D1D1D" />
+                </button>
+              </div>
+
+              {/* 배경 선택 컨테이너 */}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: "16px",
+                  flex: 1,
+                  width: "100%",
+                }}
+              >
+                {/* apartment 배경 (기본) */}
+                <div
+                  style={{
+                    display: "flex",
+                    flex: 1,
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: "12px",
+                    cursor: "pointer",
+                  }}
+                  onClick={() => {
+                    setSelectedBackground("apartment");
+                    setShowBackgroundModal(false);
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      width: "100%",
+                      aspectRatio: "1 / 1",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      borderRadius: "20px",
+                      border:
+                        selectedBackground === "apartment"
+                          ? "2px solid #5A35EC"
+                          : "1px solid #EEE",
+                      background: "#FAFAFA",
+                      position: "relative",
+                      overflow: "hidden",
+                    }}
+                  >
+                    {/* 선택 체크마크 */}
+                    {selectedBackground === "apartment" && (
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: "12px",
+                          left: "12px",
+                          width: "32px",
+                          height: "32px",
+                          borderRadius: "50%",
+                          background: "#5A35EC",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          zIndex: 10,
+                        }}
+                      >
+                        <Check size={24} color="#FFF" />
+                      </div>
+                    )}
+
+                    {/* 썸네일 이미지 (오른쪽 배치) */}
+                    <div
+                      style={{
+                        position: "absolute",
+                        right: 0,
+                        top: 0,
+                        bottom: 0,
+                        width: "50%",
+                        background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "48px",
+                      }}
+                    >
+                      🏢
+                    </div>
+                  </div>
+
+                  {/* 배경 이름 */}
+                  <div
+                    style={{
+                      alignSelf: "stretch",
+                      color: "#1D1D1D",
+                      textAlign: "center",
+                      fontFamily:
+                        '"Noto Sans KR", "Pretendard Variable", Pretendard, sans-serif',
+                      fontSize: "18px",
+                      fontStyle: "normal",
+                      fontWeight: 500,
+                      lineHeight: "24px",
+                      letterSpacing: "-0.36px",
+                    }}
+                  >
+                    apartment
+                  </div>
+                </div>
+
+                {/* 무작위 배경 */}
+                <div
+                  style={{
+                    display: "flex",
+                    flex: 1,
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: "12px",
+                    cursor: "pointer",
+                  }}
+                  onClick={() => {
+                    setSelectedBackground("random");
+                    setShowBackgroundModal(false);
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      width: "100%",
+                      aspectRatio: "1 / 1",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      borderRadius: "20px",
+                      border:
+                        selectedBackground === "random"
+                          ? "2px solid #5A35EC"
+                          : "1px solid #EEE",
+                      background: "#FAFAFA",
+                      position: "relative",
+                      overflow: "hidden",
+                    }}
+                  >
+                    {/* 선택 체크마크 */}
+                    {selectedBackground === "random" && (
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: "12px",
+                          left: "12px",
+                          width: "32px",
+                          height: "32px",
+                          borderRadius: "50%",
+                          background: "#5A35EC",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          zIndex: 10,
+                        }}
+                      >
+                        <Check size={24} color="#FFF" />
+                      </div>
+                    )}
+
+                    {/* 썸네일 이미지 (오른쪽 배치) */}
+                    <div
+                      style={{
+                        position: "absolute",
+                        right: 0,
+                        top: 0,
+                        bottom: 0,
+                        width: "50%",
+                        background: "linear-gradient(135deg, #f093fb 0%, #f5576c 100%)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        fontSize: "48px",
+                      }}
+                    >
+                      🎲
+                    </div>
+                  </div>
+
+                  {/* 배경 이름 */}
+                  <div
+                    style={{
+                      alignSelf: "stretch",
+                      color: "#1D1D1D",
+                      textAlign: "center",
+                      fontFamily:
+                        '"Noto Sans KR", "Pretendard Variable", Pretendard, sans-serif',
+                      fontSize: "18px",
+                      fontStyle: "normal",
+                      fontWeight: 500,
+                      lineHeight: "24px",
+                      letterSpacing: "-0.36px",
+                    }}
+                  >
+                    무작위
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
       {/* 오디오 자동 재생 허용 모달 */}
       {showAudioPermissionModal && (
         <div 
