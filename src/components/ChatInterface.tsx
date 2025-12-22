@@ -97,6 +97,7 @@ export default function ChatInterface() {
   const [showComingSoonToast, setShowComingSoonToast] = useState(false); // 준비 중 토스트
   const permissionDeniedRef = useRef<boolean>(false); // 권한 거부 ref (재시도 방지용)
   const permissionGrantedRef = useRef<boolean>(false); // 권한 허용 ref (중복 확인 방지용)
+  const isFocusedRef = useRef<boolean>(false); // 포커스 상태 ref (실시간 체크용)
   const audioContextRef = useRef<AudioContext | null>(null); // 오디오 컨텍스트 ref
   const speechSilenceTimerRef = useRef<NodeJS.Timeout | null>(null); // 음성 침묵 감지 타이머
   const {
@@ -329,8 +330,8 @@ export default function ChatInterface() {
       console.log("⏸️ TTS 재생 중이므로 음성 인식 시작 대기");
       return;
     }
-    // Input이 포커스 중이면 시작하지 않음 (키보드 입력 우선)
-    if (isFocused) {
+    // Input이 포커스 중이면 시작하지 않음 (키보드 입력 우선) - ref로 체크
+    if (isFocusedRef.current) {
       console.log("⏸️ Input 포커스 중이므로 음성 인식 시작하지 않음");
       return;
     }
@@ -376,7 +377,7 @@ export default function ChatInterface() {
       isListeningRef.current = false;
       setIsListening(false);
     }
-  }, [isMuted, isFocused, checkMicrophonePermission]);
+  }, [isMuted, checkMicrophonePermission]); // isFocused 제거 (ref 사용)
 
   // 음성 인식 중지
   const stopRecognition = () => {
@@ -892,10 +893,10 @@ export default function ChatInterface() {
             !isListeningRef.current &&
             !isMuted &&
             !permissionDeniedRef.current &&
-            !isFocused // Input이 포커스 중이 아닐 때만 재시작
+            !isFocusedRef.current // ref로 체크 (더 안정적)
           ) {
             startRecognition();
-          } else if (isFocused) {
+          } else if (isFocusedRef.current) {
             console.log("⏸️ Input 포커스 중이므로 자동 재시작 취소");
           }
         }, 800); // 100ms → 800ms로 증가 (TTS 완전 종료 대기)
@@ -934,16 +935,24 @@ export default function ChatInterface() {
 
     // 사용자 상호작용 후 시작 (iOS Safari 호환성)
     // 페이지 로드 시 자동 시작 대신, 사용자가 마이크 버튼을 클릭하거나 페이지와 상호작용한 후 시작
-    const handleUserInteraction = async () => {
+    const handleUserInteraction = async (event: MouseEvent | TouchEvent) => {
+      // Input/textarea 클릭은 무시 (키보드 입력 방해 방지)
+      const target = event.target as HTMLElement;
+      if (target.tagName === 'TEXTAREA' || target.tagName === 'INPUT') {
+        console.log("⏸️ Input 요소 클릭 감지 - 음성 인식 자동 시작 안 함");
+        return;
+      }
+      
       // 권한이 거부된 경우 시작하지 않음
       if (permissionDeniedRef.current) {
         return;
       }
 
-      if (!isMuted && !isListeningRef.current && !isFocused) {
+      if (!isMuted && !isListeningRef.current && !isFocusedRef.current) {
         // 약간의 지연 후 시작 (브라우저 정책 준수)
         setTimeout(() => {
-          if (!permissionDeniedRef.current && !isFocused) {
+          if (!permissionDeniedRef.current && !isFocusedRef.current) {
+            console.log("사용자 상호작용 후 음성 인식 시작");
             startRecognition();
           }
         }, 300);
@@ -954,8 +963,8 @@ export default function ChatInterface() {
     };
 
     // 사용자 상호작용 대기
-    document.addEventListener("click", handleUserInteraction, { once: true });
-    document.addEventListener("touchstart", handleUserInteraction, {
+    document.addEventListener("click", handleUserInteraction as EventListener, { once: true });
+    document.addEventListener("touchstart", handleUserInteraction as EventListener, {
       once: true,
     });
 
@@ -968,7 +977,7 @@ export default function ChatInterface() {
         !isAudioPlayingRef.current && // TTS 재생 중이 아닐 때만
         recognitionRef.current &&
         !permissionDeniedRef.current &&
-        !isFocused // Input 포커스 중이 아닐 때만
+        !isFocusedRef.current // ref로 체크 (더 안정적)
       ) {
         try {
           startRecognition();
@@ -990,9 +999,8 @@ export default function ChatInterface() {
         recognitionRef.current = null;
       }
       // 이벤트 리스너 정리
-      document.removeEventListener("click", handleUserInteraction);
-      document.removeEventListener("touchstart", handleUserInteraction);
-      document.removeEventListener("touchend", handleUserInteraction);
+      document.removeEventListener("click", handleUserInteraction as EventListener);
+      document.removeEventListener("touchstart", handleUserInteraction as EventListener);
       clearTimeout(autoStartTimer);
     };
   }, [resetSilenceTimer, startRecognition, isMuted, checkMicrophonePermission]);
@@ -1022,16 +1030,16 @@ export default function ChatInterface() {
           !isLoadingRef.current &&
           recognitionRef.current &&
           !permissionDeniedRef.current &&
-          !isFocused // Input 포커스 중이 아닐 때만 재시작
+          !isFocusedRef.current // ref로 체크 (더 안정적)
         ) {
           console.log("🎤 음성 인식 재시작");
           startRecognition();
-        } else if (isFocused) {
+        } else if (isFocusedRef.current) {
           console.log("⏸️ Input 포커스 중이므로 음성 인식 재시작 안 함");
         }
       }, 800); // 스피커 잔향이 완전히 사라질 때까지 대기
     }
-  }, [isAudioPlaying, isMuted, isFocused, startRecognition]);
+  }, [isAudioPlaying, isMuted, startRecognition]); // isFocused 제거 (ref 사용)
 
   useEffect(() => {
     isLoadingRef.current = isLoading;
@@ -2255,6 +2263,14 @@ export default function ChatInterface() {
                   }
                 }}
                 onKeyPress={handleKeyPress}
+                onClick={(e) => {
+                  // 클릭 시 이벤트 전파 방지 (handleUserInteraction 방지)
+                  e.stopPropagation();
+                }}
+                onTouchStart={(e) => {
+                  // 터치 시작 시 이벤트 전파 방지
+                  e.stopPropagation();
+                }}
                 onFocus={() => {
                   // Input 포커스 시 음성 인식 중지
                   if (isListening) {
@@ -2262,10 +2278,12 @@ export default function ChatInterface() {
                     autoRestartRef.current = false;
                   }
                   setIsFocused(true);
+                  isFocusedRef.current = true; // ref도 업데이트
                   console.log("✏️ Input 포커스됨 - 음성 인식 중지");
                 }}
                 onBlur={() => {
                   setIsFocused(false);
+                  isFocusedRef.current = false; // ref도 업데이트
                   console.log("🔒 Input 포커스 해제");
                 }}
                 placeholder="무엇이든지 물어보세요."
