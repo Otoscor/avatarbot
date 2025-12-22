@@ -50,7 +50,7 @@ export default function Avatar() {
 
   // 모델 로드 (캐릭터 선택에 따라 VRM 또는 GLB 로드)
   useEffect(() => {
-    console.log("=== 모델 로드 시작 ===");
+    // 모델 로드 시작
 
     // 기존 모델 정리
     if (gltf && groupRef.current) {
@@ -67,8 +67,6 @@ export default function Avatar() {
     const isGLB = selectedCharacter === "jinyoung";
     const modelPath = isGLB ? "/loopy2.glb" : "/avatar.vrm";
     
-    console.log("모델 타입:", isGLB ? "GLB" : "VRM");
-    console.log("모델 경로:", modelPath);
 
     // 로더 생성 (GLB는 VRM 플러그인 없이)
     const loader = new GLTFLoader();
@@ -80,39 +78,25 @@ export default function Avatar() {
     loader.load(
       modelPath,
       (loadedGltf) => {
-        console.log("모델 로드 성공!", isGLB ? "GLB" : "VRM");
+        // 모델 로드 성공
         setGltf(loadedGltf);
         setIsGLBModel(isGLB);
         
         if (isGLB) {
           // GLB 모델인 경우
-          console.log("GLB 모델 로드 완료");
-          console.log("GLB Scene:", loadedGltf.scene);
+          console.log("✅ GLB 모델 로드 완료");
           
-          // === 애니메이션 확인 및 재생 ===
-          console.log("🎬 GLB 애니메이션 확인:");
-          console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
+          // AnimationMixer 생성 및 애니메이션 설정
           if (loadedGltf.animations && loadedGltf.animations.length > 0) {
-            console.log(`✅ 총 ${loadedGltf.animations.length}개의 애니메이션이 GLB에 포함되어 있습니다!`);
-            console.log("━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━");
-            loadedGltf.animations.forEach((clip, index) => {
-              console.log(`📹 애니메이션 ${index + 1}/${loadedGltf.animations.length}:`);
-              console.log(`   이름: ${clip.name}`);
-              console.log(`   길이: ${clip.duration.toFixed(2)}초`);
-              console.log(`   트랙 수: ${clip.tracks.length}개`);
-              console.log(`   ────────────────────────`);
-            });
-            
-            // AnimationMixer 생성 및 애니메이션 설정
             const mixer = new THREE.AnimationMixer(loadedGltf.scene);
             mixerRef.current = mixer;
             
             // 감정별 애니메이션 매핑
             const emotionAnimationMap: Record<string, string> = {
               neutral: "Idle_01.001",
-              happy: "smile.001", // smile.001 복원
-              sad: "Idle_01.001", // concern.001 일시 중지
-              angry: "Idle_01.001", // concern.001 일시 중지
+              happy: "smile.001",
+              sad: "Idle_01.001",
+              angry: "Idle_01.001",
               surprised: "smile.001",
             };
             
@@ -120,11 +104,10 @@ export default function Avatar() {
             const actions: Record<string, THREE.AnimationAction> = {};
             loadedGltf.animations.forEach((clip) => {
               const action = mixer.clipAction(clip);
-              action.setLoop(THREE.LoopPingPong, Infinity); // 핑퐁 루핑: 앞으로 → 뒤로 자연스러운 왕복
+              action.setLoop(THREE.LoopPingPong, Infinity);
               action.clampWhenFinished = false;
-              action.timeScale = 0.8; // 루피 애니메이션 속도
+              action.timeScale = 0.8;
               actions[clip.name] = action;
-              console.log(`📦 애니메이션 준비: ${clip.name} (핑퐁 루핑)`);
             });
             glbActionsRef.current = actions;
             
@@ -133,42 +116,54 @@ export default function Avatar() {
             if (actions[defaultAnimation]) {
               actions[defaultAnimation].play();
               currentGLBActionRef.current = actions[defaultAnimation];
-              console.log(`▶️ 기본 애니메이션 재생: ${defaultAnimation}`);
             }
-            
-            console.log(`\n💡 감정별 애니메이션 매핑:`);
-            Object.entries(emotionAnimationMap).forEach(([emotion, animName]) => {
-              console.log(`   ${emotion} → ${animName}`);
-            });
-          } else {
-            console.log("⚠️ 애니메이션이 없습니다");
           }
           
-          // GLB의 본 구조 출력
-          console.log("🦴 GLB 본(Bone) 구조:");
-          loadedGltf.scene.traverse((object) => {
-            if (object.type === "Bone" || object.name.includes("Bone") || object.name.includes("bone")) {
-              console.log(`  - ${object.name} (type: ${object.type})`);
-            }
-          });
+          // 🗣️ 립싱크를 위한 입 제어 가능한 본 체크
+          console.log("\n🗣️ === 립싱크 본(Bone) 체크 ===");
+          let mouthBones: string[] = [];
+          let morphTargets: string[] = [];
           
-          // GLB의 Mesh와 MorphTargets 출력
-          console.log("🎭 GLB Mesh 및 BlendShape:");
-          loadedGltf.scene.traverse((object) => {
+          loadedGltf.scene.traverse((object: any) => {
+            const name = object.name?.toLowerCase() || "";
+            
+            // 입 관련 본 찾기
+            if (object.type === "Bone" && (
+              name.includes("jaw") || 
+              name.includes("mouth") || 
+              name.includes("lip") ||
+              name.includes("chin") ||
+              name.includes("tongue")
+            )) {
+              mouthBones.push(object.name);
+            }
+            
+            // MorphTargets (BlendShapes) 찾기
             if ((object as THREE.Mesh).isMesh) {
               const mesh = object as THREE.Mesh;
-              if (mesh.morphTargetDictionary && mesh.morphTargetInfluences) {
-                console.log(`Mesh: ${mesh.name}`);
-                console.log("  MorphTargets:", Object.keys(mesh.morphTargetDictionary));
+              if (mesh.morphTargetDictionary) {
+                Object.keys(mesh.morphTargetDictionary).forEach((morphName) => {
+                  const morphLower = morphName.toLowerCase();
+                  if (morphLower.includes("mouth") || 
+                      morphLower.includes("lip") ||
+                      morphLower.includes("aa") ||
+                      morphLower.includes("open")) {
+                    morphTargets.push(morphName);
+                  }
+                });
               }
             }
           });
-
-          // GLB 모델 (루피)의 초기 포즈 설정
-          console.log("🔧 루피 GLB 모델 초기 포즈 설정 중...");
           
-          // === 1단계: 모든 오브젝트 출력 (Bone이 아닌 것도 포함) ===
-          console.log("🔍 === GLB 전체 계층 구조 분석 ===");
+          console.log("입 제어 가능한 본:", mouthBones.length > 0 ? mouthBones : "없음");
+          console.log("입 관련 MorphTargets:", morphTargets.length > 0 ? morphTargets : "없음");
+          
+          if (mouthBones.length === 0 && morphTargets.length === 0) {
+            console.warn("⚠️ 립싱크를 위한 본이나 MorphTarget이 없습니다. 립싱크가 작동하지 않을 수 있습니다.");
+          } else {
+            console.log("✅ 립싱크 준비 완료");
+          }
+          console.log("━━━━━━━━━━━━━━━━━━━━━━\n");
           
           const armRelatedObjects: any[] = [];
           
@@ -194,47 +189,17 @@ export default function Avatar() {
             }
           });
           
-          console.log("\n📋 팔/어깨 관련 오브젝트 전체 목록 (Type 포함):");
-          armRelatedObjects.forEach(obj => {
-            console.log(`\n이름: ${obj.name}`);
-            console.log(`  타입: ${obj.type} ⭐`);
-            console.log(`  부모: ${obj.parent}`);
-            console.log(`  자식 수: ${obj.children}`);
-            console.log(`  회전: x=${obj.rotation.x}, y=${obj.rotation.y}, z=${obj.rotation.z}`);
-          });
+          // 팔/어깨 본 정보는 개발 시에만 필요하므로 주석 처리
           
-          console.log("\n\n💡 === 중요 정보 ===");
-          console.log("위에서 'type: Bone'인 것들이 실제 변형을 담당합니다!");
-          console.log("팔을 제어하는 본은 보통 다음 중 하나입니다:");
-          console.log("1. shoulderl/shoulderr (어깨)");
-          console.log("2. arml/armr 또는 upper_arml/upper_armr (상완)");
-          console.log("3. 부모 본의 이름을 확인하여 계층 구조 파악 필요");
-          
-          // === 2단계: GLB 애니메이션이 있으면 본 조작 안 함 ===
-          console.log("\n\n💡 === GLB 모델은 애니메이션을 재생합니다 ===");
-          console.log("⚠️ 본을 직접 조작하지 않고 내장 애니메이션을 사용합니다");
-          console.log("⚠️ 팔 포즈를 조정하려면 Blender 등에서 애니메이션을 수정해야 합니다");
-          
-          console.log("\n✅ 루피 GLB 초기 포즈 설정 완료");
-          console.log("👆 위 로그를 확인하여 어떤 본이 실제로 팔을 제어하는지 파악해주세요!");
+          // GLB 초기화 완료
         } else {
           // VRM 모델인 경우
           const vrmData = loadedGltf.userData.vrm as VRM;
           if (vrmData) {
             setVrm(vrmData);
 
-          // ===== 1단계: 디버깅 로그 추가 (필수) =====
-          console.log("=== VRM 뼈대 구조 점검 ===");
+          // VRM 모델 초기화
           if (vrmData.humanoid) {
-            // 🔍 모든 humanoid 본 이름 출력
-            console.log("🦴 사용 가능한 모든 본(Bone) 목록:");
-            const humanoidBones = vrmData.humanoid.humanBones;
-            (Object.keys(humanoidBones) as Array<keyof typeof humanoidBones>).forEach((boneName) => {
-              const bone = humanoidBones[boneName];
-              if (bone && bone.node) {
-                console.log(`  - ${boneName}: ${bone.node.name}`);
-              }
-            });
 
             const hips = vrmData.humanoid.getNormalizedBoneNode("hips");
             const spine = vrmData.humanoid.getNormalizedBoneNode("spine");
@@ -247,71 +212,10 @@ export default function Avatar() {
             const upperChest =
               vrmData.humanoid.getNormalizedBoneNode("upperChest");
 
-            console.log("Hips 존재:", !!hips, hips);
-            console.log("Spine 존재:", !!spine, spine);
-            console.log("Chest 존재:", !!chest, chest);
-            console.log("UpperChest 존재:", !!upperChest, upperChest);
-            console.log("Head 존재:", !!head, head);
-            console.log("LeftUpperArm 존재:", !!leftUpperArm, leftUpperArm);
-            console.log("RightUpperArm 존재:", !!rightUpperArm, rightUpperArm);
-
+            // VRM 본 구조 검증 (에러만 출력)
             if (!hips) console.warn("⚠️ Hips 뼈를 찾을 수 없습니다!");
-            if (!spine) console.warn("⚠️ Spine 뼈를 찾을 수 없습니다!");
-            if (!head) console.warn("⚠️ Head 뼈를 찾을 수 없습니다!");
-            if (!leftUpperArm)
-              console.warn("⚠️ LeftUpperArm 뼈를 찾을 수 없습니다!");
-            if (!rightUpperArm)
-              console.warn("⚠️ RightUpperArm 뼈를 찾을 수 없습니다!");
-
-            // 🔍 본의 초기 rotation 값 출력 (명확하게)
-            if (leftUpperArm) {
-              console.log("📍 LeftUpperArm 초기 rotation:");
-              console.log(
-                `   X: ${leftUpperArm.rotation.x.toFixed(4)} (${(
-                  (leftUpperArm.rotation.x * 180) /
-                  Math.PI
-                ).toFixed(1)}°)`
-              );
-              console.log(
-                `   Y: ${leftUpperArm.rotation.y.toFixed(4)} (${(
-                  (leftUpperArm.rotation.y * 180) /
-                  Math.PI
-                ).toFixed(1)}°)`
-              );
-              console.log(
-                `   Z: ${leftUpperArm.rotation.z.toFixed(4)} (${(
-                  (leftUpperArm.rotation.z * 180) /
-                  Math.PI
-                ).toFixed(1)}°)`
-              );
-            }
-            if (rightUpperArm) {
-              console.log("📍 RightUpperArm 초기 rotation:");
-              console.log(
-                `   X: ${rightUpperArm.rotation.x.toFixed(4)} (${(
-                  (rightUpperArm.rotation.x * 180) /
-                  Math.PI
-                ).toFixed(1)}°)`
-              );
-              console.log(
-                `   Y: ${rightUpperArm.rotation.y.toFixed(4)} (${(
-                  (rightUpperArm.rotation.y * 180) /
-                  Math.PI
-                ).toFixed(1)}°)`
-              );
-              console.log(
-                `   Z: ${rightUpperArm.rotation.z.toFixed(4)} (${(
-                  (rightUpperArm.rotation.z * 180) /
-                  Math.PI
-                ).toFixed(1)}°)`
-              );
-            }
-            if (hips) {
-              console.log("📍 Hips 초기 position:");
-              console.log(`   X: ${hips.position.x.toFixed(4)}`);
-              console.log(`   Y: ${hips.position.y.toFixed(4)}`);
-              console.log(`   Z: ${hips.position.z.toFixed(4)}`);
-            }
+            if (!leftUpperArm) console.warn("⚠️ LeftUpperArm 뼈를 찾을 수 없습니다!");
+            if (!rightUpperArm) console.warn("⚠️ RightUpperArm 뼈를 찾을 수 없습니다!");
           } else {
             console.error("❌ VRM Humanoid가 없습니다!");
           }
@@ -333,10 +237,7 @@ export default function Avatar() {
               }
             });
 
-            console.log(
-              "사용 가능한 BlendShape:",
-              vrmData.expressionManager.expressions.map((e) => e.expressionName)
-            );
+            // BlendShape 초기화 완료
           }
           blendShapeWeightsRef.current = initialWeights;
 
@@ -346,14 +247,12 @@ export default function Avatar() {
           }
 
           // lookAt 기능 확인
-          if (vrmData.lookAt) {
-            console.log("✅ lookAt 기능 사용 가능");
-          } else {
+          if (!vrmData.lookAt) {
             console.warn("⚠️ lookAt 기능을 사용할 수 없습니다");
           }
 
             vrmInitializedRef.current = true;
-            console.log("=== VRM 초기화 완료 ===");
+            console.log("✅ VRM 모델 초기화 완료");
           }
         }
         
@@ -482,7 +381,7 @@ export default function Avatar() {
         selectedAnimation = randomSelectNonRepeat(bestPattern.pattern.animations);
       }
       
-      console.log(`📝 텍스트 분석: "${bestPattern.keyword}" 감지 (가중치: ${bestPattern.pattern.weight}) → ${selectedAnimation}`);
+      // 텍스트 기반 애니메이션 선택
     } else {
       // 키워드가 없으면 감정 + 랜덤 요소
       const emotionAnimationMap: Record<Emotion, string[]> = {
@@ -495,8 +394,6 @@ export default function Avatar() {
       
       const candidates = emotionAnimationMap[emotion];
       selectedAnimation = randomSelectNonRepeat(candidates);
-      
-      console.log(`🎭 감정 기반: ${emotion} → ${selectedAnimation} (랜덤 선택)`);
     }
     
     // 이전 애니메이션 저장
@@ -531,7 +428,7 @@ export default function Avatar() {
       return;
     }
     
-    console.log(`🎬 애니메이션 전환: ${targetAnimationName}`);
+    // 애니메이션 전환
     
     // 이전 애니메이션에서 새 애니메이션으로 부드럽게 전환
     if (currentGLBActionRef.current) {
@@ -570,7 +467,7 @@ export default function Avatar() {
       gltf.scene.scale.set(1, 1, 1);
       groupRef.current.add(gltf.scene);
 
-      console.log("✅ 모델 씬이 그룹에 추가됨");
+        // 모델 씬 추가 완료
 
       // 🔍 1단계: Skeleton 시각화 및 본 이름 전체 출력
       // SkeletonHelper 제거됨 (이상한 선 제거)
@@ -630,28 +527,9 @@ export default function Avatar() {
 
   // 오디오 재생 및 립싱크 설정
   useEffect(() => {
-    console.log("=== Avatar: 오디오 재생 시도 ===", {
-      hasAudio: !!currentAudio,
-      audioLength: currentAudio?.length,
-      hasVrm: !!vrm,
-      isGLBModel: isGLBModel,
-      hasGltf: !!gltf,
-      selectedCharacter: selectedCharacter,
-    });
-
-    // 오디오가 없으면 재생 불가
-    if (!currentAudio) {
-      console.log("❌ Avatar: 오디오 데이터가 없어서 재생하지 않음");
-      return;
-    }
-
-    // VRM 모델도 없고 GLB 모델도 아니면 재생 불가
-    if (!vrm && !isGLBModel) {
-      console.log("❌ Avatar: 모델이 로드되지 않아서 재생하지 않음 (vrm:", !!vrm, "isGLBModel:", isGLBModel, ")");
-      return;
-    }
-
-    console.log("✅ Avatar: 오디오 재생 조건 충족! 재생 시작...")
+    // 오디오 재생 조건 체크
+    if (!currentAudio) return;
+    if (!vrm && !isGLBModel) return;
 
     // 기존 오디오 정리
     if (audioRef.current) {
@@ -703,10 +581,7 @@ export default function Avatar() {
     const gainNode = audioContext.createGain();
     gainNode.gain.value = 1.0; // 기본 볼륨
 
-    // 오디오가 충분히 로드될 때까지 대기
-    audio.addEventListener("canplaythrough", () => {
-      console.log("Avatar: 오디오 버퍼링 완료");
-    });
+    // 오디오 버퍼링 대기
 
     const source = audioContext.createMediaElementSource(audio);
     sourceRef.current = source;
@@ -718,8 +593,6 @@ export default function Avatar() {
     
     // 립싱크용 분석은 별도로 연결 (재생에 영향 없음)
     gainNode.connect(analyser);
-
-    console.log("Avatar: 오디오 재생 시작");
     const playAudio = async () => {
       try {
         // AudioContext 활성화
@@ -735,7 +608,6 @@ export default function Avatar() {
         }
         
         await audio.play();
-        console.log("Avatar: 오디오 재생 성공");
         setAudioPlaying(true);
       } catch (error: any) {
         console.error("Avatar: 오디오 재생 오류:", error);
@@ -744,7 +616,7 @@ export default function Avatar() {
           error.name === "NotAllowedError" ||
           error.name === "NotSupportedError"
         ) {
-          console.log("Avatar: 사용자 상호작용 필요, 재시도 대기 중...");
+          console.warn("오디오 재생을 위해 사용자 상호작용이 필요합니다");
 
           const handleUserInteraction = async () => {
             if (audioRef.current && audioRef.current.paused) {
@@ -753,7 +625,6 @@ export default function Avatar() {
                   await audioContextRef.current.resume();
                 }
                 await audioRef.current.play();
-                console.log("Avatar: 사용자 상호작용 후 오디오 재생 성공");
                 setAudioPlaying(true);
               } catch (retryError) {
                 console.error(
@@ -1387,18 +1258,12 @@ export default function Avatar() {
   // 클릭 시 랜덤 애니메이션 재생
   const handleAvatarClick = () => {
     if (selectedCharacter === 'jinyoung' && glbActionsRef.current) {
-      console.log("🖱️ 루피 클릭됨!");
-      
-      // 사용 가능한 모든 애니메이션 목록
       const availableAnimations = Object.keys(glbActionsRef.current);
-      console.log("사용 가능한 애니메이션:", availableAnimations);
       
       if (availableAnimations.length > 0) {
         // 랜덤 애니메이션 선택
         const randomIndex = Math.floor(Math.random() * availableAnimations.length);
         const randomAnimation = availableAnimations[randomIndex];
-        
-        console.log(`🎲 랜덤 애니메이션 선택: ${randomAnimation}`);
         
         // 모든 애니메이션 중지
         Object.values(glbActionsRef.current).forEach((action) => {
@@ -1411,7 +1276,6 @@ export default function Avatar() {
           selectedAction.reset();
           selectedAction.fadeIn(0.3);
           selectedAction.play();
-          console.log(`✅ ${randomAnimation} 애니메이션 재생!`);
         }
       }
     }
