@@ -135,10 +135,25 @@ export default function ChatHistory() {
           paddingRight: "20px",
           background: "#FFF",
           display: "flex",
-          justifyContent: "flex-end",
+          justifyContent: "space-between",
           alignItems: "center",
         }}
       >
+        {/* 왼쪽: 캐릭터 이름 */}
+        <div
+          style={{
+            color: "#1D1D1D",
+            fontFamily: '"Pretendard Variable", Pretendard, sans-serif',
+            fontSize: "18px",
+            fontWeight: 600,
+            lineHeight: "56px", // 버튼 높이와 동일하게 설정하여 수직 중앙 정렬
+            letterSpacing: "-0.36px",
+          }}
+        >
+          {CHARACTER_NAMES[selectedCharacter]}야
+        </div>
+
+        {/* 오른쪽: 닫기 버튼 */}
         <button
           style={{
             display: "flex",
