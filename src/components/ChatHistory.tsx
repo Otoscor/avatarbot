@@ -156,23 +156,27 @@ export default function ChatHistory() {
         </div>
       </div>
 
-      {/* 입력창 영역 */}
+      {/* 배경 그라디언트 */}
       <div
-        className="w-full px-5"
+        className="w-full"
         style={{
-          paddingBottom: "16px",
+          paddingBottom: "48px",
           background:
             "linear-gradient(to top, rgba(29, 29, 29, 1) 0%, rgba(29, 29, 29, 0.9) 50%, transparent 100%)",
         }}
       >
+        {/* 입력창 영역 */}
         <div
-          className="flex items-center transition-all duration-300 ease-in-out"
-          style={{
-            padding: "0 10px",
-            gap: "6px",
-          }}
+          className="w-full px-5"
+          style={{ marginBottom: "0px" }}
         >
-          {/* 인풋 필드 */}
+          <div
+            className="flex items-center transition-all duration-300 ease-in-out"
+            style={{
+              padding: "0 10px",
+            }}
+          >
+          {/* 인풋 필드 + 통화/전송 버튼 */}
           <div
             className="flex items-center flex-1 transition-all duration-300 ease-in-out"
             style={{
@@ -200,53 +204,54 @@ export default function ChatHistory() {
                 fontFamily: '"Pretendard Variable", Pretendard, sans-serif',
               }}
             />
+            
+            {/* 통화 버튼 / 전송 버튼 전환 (인풋 안에) */}
+            <button
+              onClick={() => {
+                if (isFocused || inputValue.trim()) {
+                  // 포커스 중이거나 텍스트가 있으면 전송
+                  handleSend();
+                } else {
+                  // 그 외에는 통화 화면으로 이동
+                  router.push("/");
+                }
+              }}
+              disabled={isLoading || (isFocused && !inputValue.trim())}
+              className="flex justify-center items-center flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+              style={{
+                minWidth: isFocused || inputValue.trim() ? "48px" : "auto",
+                height: "48px",
+                padding: isFocused || inputValue.trim() ? "0 12px" : "0 16px",
+                gap: "4px",
+                borderRadius: "12px",
+                background:
+                  "linear-gradient(180deg, #8569F2 0%, #5A35EC 100%)",
+                boxShadow: "0 2px 4px 0 rgba(255, 255, 255, 0.25) inset",
+                fontFamily: '"Pretendard Variable", Pretendard, sans-serif',
+              }}
+              title={isFocused || inputValue.trim() ? "전송" : "통화"}
+            >
+              {isFocused || inputValue.trim() ? (
+                <ArrowUp className="w-6 h-6 text-white" />
+              ) : (
+                <div className="flex items-center gap-2">
+                  <Phone className="w-5 h-5 text-white" />
+                  <span
+                    style={{
+                      color: "#FFF",
+                      fontSize: "16px",
+                      fontWeight: 600,
+                      lineHeight: "24px",
+                      letterSpacing: "-0.32px",
+                    }}
+                  >
+                    통화
+                  </span>
+                </div>
+              )}
+            </button>
           </div>
-
-          {/* 통화 버튼 / 전송 버튼 전환 */}
-          <button
-            onClick={() => {
-              if (isFocused || inputValue.trim()) {
-                // 포커스 중이거나 텍스트가 있으면 전송
-                handleSend();
-              } else {
-                // 그 외에는 통화 화면으로 이동
-                router.push("/");
-              }
-            }}
-            disabled={isLoading || (isFocused && !inputValue.trim())}
-            className="flex justify-center items-center flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
-            style={{
-              minWidth: "56px",
-              height: "56px",
-              padding: isFocused || inputValue.trim() ? "0 12px" : "0 16px",
-              gap: "4px",
-              borderRadius: "16px",
-              background:
-                "linear-gradient(180deg, #8569F2 0%, #5A35EC 100%)",
-              boxShadow: "0 2px 4px 0 rgba(255, 255, 255, 0.25) inset",
-              fontFamily: '"Pretendard Variable", Pretendard, sans-serif',
-            }}
-            title={isFocused || inputValue.trim() ? "전송" : "통화"}
-          >
-            {isFocused || inputValue.trim() ? (
-              <ArrowUp className="w-6 h-6 text-white" />
-            ) : (
-              <div className="flex items-center gap-2">
-                <Phone className="w-5 h-5 text-white" />
-                <span
-                  style={{
-                    color: "#FFF",
-                    fontSize: "16px",
-                    fontWeight: 600,
-                    lineHeight: "24px",
-                    letterSpacing: "-0.32px",
-                  }}
-                >
-                  통화
-                </span>
-              </div>
-            )}
-          </button>
+        </div>
         </div>
       </div>
     </div>
