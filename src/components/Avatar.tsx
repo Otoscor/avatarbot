@@ -9,13 +9,6 @@ import * as THREE from "three";
 import type { GLTF } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { useChatStore, type Emotion } from "@/store/useChatStore";
 
-// 디버깅 타이머용 전역 타입 선언
-declare global {
-  interface Window {
-    _lipSyncDebugTimer?: number;
-  }
-}
-
 export default function Avatar() {
   const [gltf, setGltf] = useState<GLTF | null>(null);
   const [vrm, setVrm] = useState<VRM | null>(null);
@@ -38,7 +31,6 @@ export default function Avatar() {
   const analyserRef = useRef<AnalyserNode | null>(null);
   const dataArrayRef = useRef<Uint8Array | null>(null);
   const sourceRef = useRef<MediaElementAudioSourceNode | null>(null);
-  const volumeRef = useRef<number>(0);
 
   // 마우스 위치 및 시선 관련 refs
   const mousePositionRef = useRef<THREE.Vector3>(new THREE.Vector3(0, 0, 5));
@@ -125,56 +117,6 @@ export default function Avatar() {
               currentGLBActionRef.current = actions[defaultAnimation];
             }
           }
-          
-          // 🗣️ 립싱크를 위한 입 제어 가능한 본 체크
-          console.log("\n🗣️ === 립싱크 본(Bone) 체크 ===");
-          let mouthBones: string[] = [];
-          let morphTargets: string[] = [];
-          
-          loadedGltf.scene.traverse((object: any) => {
-            const name = object.name?.toLowerCase() || "";
-            
-            // 입 관련 본 찾기
-            if (object.type === "Bone" && (
-              name.includes("jaw") || 
-              name.includes("mouth") || 
-              name.includes("lip") ||
-              name.includes("chin") ||
-              name.includes("tongue")
-            )) {
-              mouthBones.push(object.name);
-            }
-            
-            // MorphTargets (BlendShapes) 찾기
-            if ((object as THREE.Mesh).isMesh) {
-              const mesh = object as THREE.Mesh;
-              if (mesh.morphTargetDictionary) {
-                Object.keys(mesh.morphTargetDictionary).forEach((morphName) => {
-                  const morphLower = morphName.toLowerCase();
-                  if (morphLower.includes("mouth") || 
-                      morphLower.includes("lip") ||
-                      morphLower.includes("aa") ||
-                      morphLower.includes("open")) {
-                    morphTargets.push(morphName);
-                  }
-                });
-              }
-            }
-          });
-          
-          console.log("입 제어 가능한 본:", mouthBones.length > 0 ? mouthBones : "없음");
-          console.log("입 관련 MorphTargets:", morphTargets.length > 0 ? [...new Set(morphTargets)] : "없음");
-          
-          if (mouthBones.length === 0 && morphTargets.length === 0) {
-            console.warn("⚠️ 립싱크를 위한 본이나 MorphTarget이 없습니다.");
-            console.warn("💡 GLB 모델에 턱 본 또는 입 모양 BlendShape가 필요합니다.");
-          } else {
-            console.log("✅ 립싱크 준비 완료");
-            console.log("📊 발견된 립싱크 요소:");
-            if (mouthBones.length > 0) console.log("   - 본:", mouthBones);
-            if (morphTargets.length > 0) console.log("   - MorphTargets:", [...new Set(morphTargets)]);
-          }
-          console.log("━━━━━━━━━━━━━━━━━━━━━━\n");
           
           const armRelatedObjects: any[] = [];
           
@@ -536,7 +478,7 @@ export default function Avatar() {
     };
   }, [vrm]);
 
-  // 오디오 재생 및 립싱크 설정
+  // 오디오 재생 설정
   useEffect(() => {
     // 오디오 재생 조건 체크
     if (!currentAudio) return;
@@ -602,7 +544,7 @@ export default function Avatar() {
     source.connect(gainNode);
     gainNode.connect(audioContext.destination);
     
-    // 립싱크용 분석은 별도로 연결 (재생에 영향 없음)
+    // 오디오 분석 노드 연결
     gainNode.connect(analyser);
     const playAudio = async () => {
       try {
@@ -673,25 +615,13 @@ export default function Avatar() {
 
     audio.onended = () => {
       console.log("Avatar: 오디오 재생 종료");
-      volumeRef.current = 0;
       setAudioPlaying(false);
 
-      // 모든 표정 및 립싱크 BlendShape 즉시 리셋
+      // 눈 깜빡임 BlendShape 리셋
       if (vrm?.expressionManager) {
         const expressionManager = vrm.expressionManager;
         expressionManager.expressions.forEach((expression) => {
           const nameLower = expression.expressionName.toLowerCase();
-          
-          // 립싱크 관련 BlendShape 0으로
-          if (
-            ["aa", "a", "ih", "i", "e", "ou", "u", "o", "ee"].includes(nameLower) ||
-            ["vrc.v_aa", "vrc.v_ih", "vrc.v_ou", "vrc.v_ee", "vrc.v_oh"].includes(nameLower) ||
-            nameLower.includes("mouth") || 
-            nameLower.includes("lip")
-          ) {
-            expressionManager.setValue(expression.expressionName, 0);
-            blendShapeWeightsRef.current[expression.expressionName] = 0;
-          }
           
           // 눈 깜빡임 BlendShape 0으로 (눈 뜨기)
           if (
@@ -742,21 +672,16 @@ export default function Avatar() {
         audioContextRef.current.close();
         audioContextRef.current = null;
       }
-      volumeRef.current = 0;
       setAudioPlaying(false);
       
-      // cleanup 시에도 모든 BlendShape 리셋
+      // cleanup 시에도 눈 깜빡임 리셋
       if (vrm?.expressionManager) {
         const expressionManager = vrm.expressionManager;
         expressionManager.expressions.forEach((expression) => {
           const nameLower = expression.expressionName.toLowerCase();
           
-          // 립싱크 및 눈 깜빡임 리셋
+          // 눈 깜빡임 리셋
           if (
-            ["aa", "a", "ih", "i", "e", "ou", "u", "o", "ee"].includes(nameLower) ||
-            ["vrc.v_aa", "vrc.v_ih", "vrc.v_ou", "vrc.v_ee", "vrc.v_oh"].includes(nameLower) ||
-            nameLower.includes("mouth") || 
-            nameLower.includes("lip") ||
             ["blink", "blinkleft", "blinkright"].includes(nameLower) ||
             nameLower.includes("blink")
           ) {
@@ -796,100 +721,6 @@ export default function Avatar() {
         mixerRef.current.update(delta);
       }
       
-      // GLB 모델의 립싱크 및 추가 애니메이션
-      // GLB 모델의 MorphTargets를 사용한 립싱크 구현
-      if (gltf) {
-        const volume = volumeRef.current;
-        const isAudioActive = audioRef.current && !audioRef.current.paused;
-        
-        gltf.scene.traverse((object) => {
-          if ((object as THREE.Mesh).isMesh) {
-            const mesh = object as THREE.Mesh;
-            if (mesh.morphTargetDictionary && mesh.morphTargetInfluences) {
-              Object.keys(mesh.morphTargetDictionary).forEach((morphName) => {
-                const index = mesh.morphTargetDictionary[morphName];
-                const nameLower = morphName.toLowerCase();
-
-                let targetWeight = 0;
-
-                // 오디오 재생 중일 때만 립싱크
-                if (isAudioActive && volume > 0.05) {
-                  // 입 관련 MorphTargets
-                  if (nameLower.includes("mouth") ||
-                      nameLower.includes("lip") ||
-                      nameLower.includes("aa") ||
-                      nameLower.includes("a") ||
-                      nameLower.includes("o") ||
-                      nameLower.includes("open")) {
-                    targetWeight = Math.min(volume * 1.5, 1.0);
-                  }
-                }
-
-                // 부드럽게 전환
-                const currentWeight = mesh.morphTargetInfluences[index];
-                mesh.morphTargetInfluences[index] = THREE.MathUtils.lerp(
-                  currentWeight,
-                  targetWeight,
-                  0.3
-                );
-              });
-            }
-          }
-        });
-      }
-      
-      // 턱 본을 이용한 립싱크 (MorphTargets가 없는 경우 대체)
-      if (gltf && selectedCharacter === "jinyoung") {
-        const volume = volumeRef.current;
-        const isAudioActive = audioRef.current && !audioRef.current.paused;
-        
-        // 디버깅: 오디오 상태 및 볼륨 로그 (1초에 한 번만)
-        if (!window._lipSyncDebugTimer || Date.now() - window._lipSyncDebugTimer > 1000) {
-          if (isAudioActive && volume > 0) {
-            console.log("🎤 립싱크 상태:", {
-              isAudioActive,
-              volume: volume.toFixed(3),
-              threshold: "0.05"
-            });
-          }
-          window._lipSyncDebugTimer = Date.now();
-        }
-        
-        gltf.scene.traverse((object: any) => {
-          if (!object.name) return;
-          const name = object.name.toLowerCase();
-          
-          // 턱 본 찾기
-          if (name.includes("jaw") || 
-              name.includes("chin") || 
-              name.includes("j_bip_c_jaw") ||
-              name === "j_bip_c_head") {
-            
-            if (isAudioActive && volume > 0.05) {
-              // 오디오 볼륨에 따라 턱을 벌림
-              const targetRotation = volume * 0.5; // 0.3에서 0.5로 증가 (더 큰 움직임)
-              
-              if (object.rotation) {
-                // 현재 회전값을 부드럽게 타겟으로 이동
-                object.rotation.x = THREE.MathUtils.lerp(
-                  object.rotation.x,
-                  targetRotation,
-                  0.5 // 0.3에서 0.5로 증가 (더 빠른 반응)
-                );
-              }
-            } else {
-              // 오디오가 없으면 입 다물기
-              if (object.rotation) {
-                object.rotation.x = THREE.MathUtils.lerp(
-                  object.rotation.x,
-                  0,
-                  0.3 // 0.2에서 0.3으로 증가
-                );
-              }
-            }
-          }
-        });
-      }
       
       return; // GLB 모델은 여기서 종료 (본 직접 조작 안 함)
     }
@@ -899,54 +730,7 @@ export default function Avatar() {
       return;
     }
 
-    // 표정(BlendShape) 및 립싱크 로직
-    // ===== 오디오 볼륨 계산 및 립싱크 준비 =====
-    if (
-      analyserRef.current &&
-      dataArrayRef.current &&
-      audioRef.current &&
-      !audioRef.current.paused
-    ) {
-      // @ts-expect-error - getByteFrequencyData accepts Uint8Array
-      analyserRef.current.getByteFrequencyData(dataArrayRef.current);
-      
-      // 주파수 대역별로 분석하여 더 정확한 립싱크
-      let lowFreqSum = 0;  // 저음역 (0-85Hz) - 모음
-      let midFreqSum = 0;  // 중음역 (85-255Hz) - 자음
-      let highFreqSum = 0; // 고음역 (255-512Hz) - 치찰음
-      
-      const lowBound = Math.floor(dataArrayRef.current.length * 0.1);
-      const midBound = Math.floor(dataArrayRef.current.length * 0.3);
-      
-      // 저음역 (모음 소리)
-      for (let i = 0; i < lowBound; i++) {
-        lowFreqSum += dataArrayRef.current[i];
-      }
-      
-      // 중음역 (일반 발음)
-      for (let i = lowBound; i < midBound; i++) {
-        midFreqSum += dataArrayRef.current[i];
-      }
-      
-      // 고음역 (치찰음)
-      for (let i = midBound; i < dataArrayRef.current.length; i++) {
-        highFreqSum += dataArrayRef.current[i];
-      }
-      
-      // 전체 평균 볼륨 (립싱크 강도)
-      let totalSum = 0;
-      for (let i = 0; i < dataArrayRef.current.length; i++) {
-        totalSum += dataArrayRef.current[i];
-      }
-      
-      // 볼륨을 좀 더 민감하게 반응하도록 조정
-      volumeRef.current = Math.min(
-        Math.pow(totalSum / dataArrayRef.current.length / 255, 0.7), // 제곱근으로 더 민감하게
-        1.0
-      );
-    } else {
-      volumeRef.current = 0;
-    }
+    // 표정(BlendShape) 로직
 
     const allExpressions = vrm.expressionManager.expressions;
     const targetEmotion = targetEmotionRef.current;
@@ -965,63 +749,6 @@ export default function Avatar() {
       const name = expression.expressionName;
       const nameLower = name.toLowerCase();
       let targetWeight = name === targetPresetName ? 1.0 : 0.0;
-
-      // ===== 립싱크 (Lip-Sync) - 오디오 재생 중일 때만 작동 =====
-      const volume = volumeRef.current;
-      const isAudioActive = audioRef.current && !audioRef.current.paused;
-      
-      // 오디오가 재생 중이고 실제 소리가 있을 때만 립싱크 적용
-      if (isAudioActive && volume > 0.05) { // 최소 임계값 0.05
-        // 'aa' - 입을 크게 벌림 (모음 a, o)
-        if (nameLower === "aa" || nameLower === "a") {
-          targetWeight = Math.min(volume * 1.8, 1.0); // 강한 립싱크
-        }
-        
-        // 'ih' - 입을 옆으로 벌림 (모음 i, e)
-        else if (nameLower === "ih" || nameLower === "i" || nameLower === "e") {
-          targetWeight = Math.min(volume * 1.5, 1.0);
-        }
-        
-        // 'ou' - 입을 둥글게 (모음 u, o)
-        else if (nameLower === "ou" || nameLower === "u" || nameLower === "o") {
-          targetWeight = Math.min(volume * 1.3, 1.0);
-        }
-        
-        // 'ee' - 이 발음
-        else if (nameLower === "ee") {
-          targetWeight = Math.min(volume * 1.2, 1.0);
-        }
-        
-        // 일반 입 모양 (기본 립싱크)
-        else if (
-          nameLower.includes("mouth") || 
-          nameLower.includes("lip") ||
-          nameLower === "vrc.v_aa" ||
-          nameLower === "vrc.v_ih" ||
-          nameLower === "vrc.v_ou" ||
-          nameLower === "vrc.v_ee" ||
-          nameLower === "vrc.v_oh"
-        ) {
-          targetWeight = Math.min(volume * 1.5, 1.0);
-        }
-      } else {
-        // 오디오가 없거나 재생 중이 아닐 때는 입 관련 BlendShape를 0으로
-        if (
-          nameLower === "aa" || nameLower === "a" ||
-          nameLower === "ih" || nameLower === "i" || nameLower === "e" ||
-          nameLower === "ou" || nameLower === "u" || nameLower === "o" ||
-          nameLower === "ee" ||
-          nameLower.includes("mouth") || 
-          nameLower.includes("lip") ||
-          nameLower === "vrc.v_aa" ||
-          nameLower === "vrc.v_ih" ||
-          nameLower === "vrc.v_ou" ||
-          nameLower === "vrc.v_ee" ||
-          nameLower === "vrc.v_oh"
-        ) {
-          targetWeight = 0; // 입을 다물음
-        }
-      }
 
       // 눈 깜빡임
       if (["blink", "blinkleft", "blinkright"].includes(name.toLowerCase())) {
@@ -1052,21 +779,8 @@ export default function Avatar() {
       }
 
       const currentWeight = blendShapeWeightsRef.current[name] || 0;
-      // 립싱크는 빠르게 반응, 다른 표정은 부드럽게
-      const isLipSync = 
-        nameLower === "aa" || nameLower === "a" ||
-        nameLower === "ih" || nameLower === "i" || nameLower === "e" ||
-        nameLower === "ou" || nameLower === "u" || nameLower === "o" ||
-        nameLower === "ee" ||
-        nameLower.includes("mouth") || 
-        nameLower.includes("lip") ||
-        nameLower === "vrc.v_aa" ||
-        nameLower === "vrc.v_ih" ||
-        nameLower === "vrc.v_ou" ||
-        nameLower === "vrc.v_ee" ||
-        nameLower === "vrc.v_oh";
-      
-      const blendSpeed = isLipSync ? 15.0 : lerpSpeed; // 립싱크는 5배 빠르게
+      // 모든 표정 부드럽게 전환
+      const blendSpeed = lerpSpeed;
       
       const newWeight = THREE.MathUtils.lerp(
         currentWeight,
