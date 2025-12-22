@@ -2,8 +2,24 @@
 
 import { useState, useRef } from "react";
 import { useChatStore } from "@/store/useChatStore";
-import { ArrowUp, Phone } from "lucide-react";
+import { ArrowUp, Phone, X } from "lucide-react";
 import { useRouter } from "next/navigation";
+
+// 캐릭터 이름 매핑
+const CHARACTER_NAMES: { [key: string]: string } = {
+  test: "서아",
+  jinyoung: "루피",
+};
+
+// 시간 포맷 함수
+const formatTime = (date: Date): string => {
+  const hours = date.getHours();
+  const minutes = date.getMinutes();
+  const period = hours >= 12 ? "오후" : "오전";
+  const displayHours = hours % 12 || 12;
+  const displayMinutes = minutes.toString().padStart(2, "0");
+  return `${period} ${displayHours}:${displayMinutes}`;
+};
 
 export default function ChatHistory() {
   const router = useRouter();
@@ -14,6 +30,7 @@ export default function ChatHistory() {
   const {
     messages,
     isLoading,
+    selectedCharacter,
     addMessage,
     setLoading,
     setEmotion,
@@ -55,6 +72,7 @@ export default function ChatHistory() {
         },
         body: JSON.stringify({
           messages: apiMessages,
+          character: selectedCharacter,
         }),
       });
 
@@ -105,9 +123,45 @@ export default function ChatHistory() {
   };
 
   return (
-    <div className="flex flex-col h-screen bg-[#1d1d1d]">
+    <div className="flex flex-col h-screen overflow-hidden bg-[#f5f5f5]" style={{ border: "none" }}>
+      {/* 헤더 */}
+      <div
+        style={{
+          width: "100%",
+          paddingTop: "16px",
+          paddingBottom: "24px",
+          paddingLeft: "20px",
+          paddingRight: "20px",
+          background: "#FFF",
+          display: "flex",
+          justifyContent: "flex-end",
+          alignItems: "center",
+        }}
+      >
+        <button
+          style={{
+            display: "flex",
+            width: "56px",
+            height: "56px",
+            padding: "10px",
+            justifyContent: "center",
+            alignItems: "center",
+            gap: "10px",
+            borderRadius: "12px",
+            background: "#FFF",
+            border: "1px solid rgba(238, 238, 238, 1)",
+            cursor: "pointer",
+          }}
+          onClick={() => {
+            router.push("/");
+          }}
+        >
+          <X className="w-6 h-6 text-[#1d1d1d]" />
+        </button>
+      </div>
+      
       {/* 채팅 메시지 영역 */}
-      <div className="flex-1 overflow-y-auto px-5 pt-6 pb-4">
+      <div className="flex-1 overflow-y-auto px-5 pb-4" style={{ paddingTop: "24px" }}>
         <div className="max-w-2xl mx-auto space-y-4">
           {messages.length === 0 ? (
             <div className="flex items-center justify-center h-full">
@@ -115,7 +169,7 @@ export default function ChatHistory() {
                 style={{
                   color: "rgba(255, 255, 255, 0.5)",
                   fontFamily: '"Pretendard Variable", Pretendard, sans-serif',
-                  fontSize: "16px",
+                  fontSize: "18px",
                   fontWeight: 400,
                 }}
               >
@@ -123,46 +177,126 @@ export default function ChatHistory() {
               </p>
             </div>
           ) : (
-            messages.map((message, index) => (
-              <div
-                key={index}
-                className={`flex ${
-                  message.role === "user" ? "justify-end" : "justify-start"
-                }`}
-              >
+            <>
+              {messages.map((message, index) => (
                 <div
-                  style={{
-                    maxWidth: "80%",
-                    padding: "12px 16px",
-                    borderRadius: "16px",
-                    background:
-                      message.role === "user"
-                        ? "linear-gradient(180deg, #8569F2 0%, #5A35EC 100%)"
-                        : "rgba(255, 255, 255, 0.1)",
-                    color: "#FFF",
-                    fontFamily: '"Pretendard Variable", Pretendard, sans-serif',
-                    fontSize: "15px",
-                    fontWeight: 400,
-                    lineHeight: "22px",
-                    letterSpacing: "-0.3px",
-                    wordBreak: "break-word",
-                  }}
+                  key={index}
+                  className={`flex flex-col ${
+                    message.role === "user" ? "items-end" : "items-start"
+                  }`}
+                  style={{ gap: "4px" }}
                 >
-                  {message.content}
+                  {/* 상대방 메시지인 경우 캐릭터 이름 표시 */}
+                  {message.role === "assistant" && (
+                    <div
+                      style={{
+                        color: "#666",
+                        fontFamily: '"Pretendard Variable", Pretendard, sans-serif',
+                        fontSize: "14px",
+                        fontWeight: 500,
+                        marginLeft: "8px",
+                        marginBottom: "2px",
+                      }}
+                    >
+                      {CHARACTER_NAMES[selectedCharacter] || "AI"}
+                    </div>
+                  )}
+                  
+                  {/* 메시지 버블과 시간을 한 줄로 배치 */}
+                  <div
+                    className={`flex items-end ${
+                      message.role === "user" ? "flex-row-reverse" : "flex-row"
+                    }`}
+                    style={{ gap: "8px" }}
+                  >
+                    <div
+                      style={{
+                        maxWidth: "80%",
+                        padding: "12px 16px",
+                        borderRadius: "16px",
+                        background:
+                          message.role === "user"
+                            ? "rgba(235, 229, 255, 1)"
+                            : "#fafafa",
+                        color: message.role === "user" ? "rgba(29, 29, 29, 1)" : "#1d1d1d",
+                        fontFamily: '"Pretendard Variable", Pretendard, sans-serif',
+                        fontSize: "18px",
+                        fontWeight: 400,
+                        lineHeight: "24px",
+                        letterSpacing: "-0.3px",
+                        wordBreak: "break-word",
+                      }}
+                    >
+                      {message.content}
+                    </div>
+                    
+                    {/* 시간 표시 */}
+                    <div
+                      style={{
+                        color: "#999",
+                        fontFamily: '"Pretendard Variable", Pretendard, sans-serif',
+                        fontSize: "12px",
+                        fontWeight: 400,
+                        whiteSpace: "nowrap",
+                        paddingBottom: "2px",
+                      }}
+                    >
+                      {formatTime(new Date(message.timestamp))}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))
+              ))}
+              {isLoading && (
+                <div className="flex flex-col items-start" style={{ gap: "4px" }}>
+                  {/* 캐릭터 이름 표시 */}
+                  <div
+                    style={{
+                      color: "#666",
+                      fontFamily: '"Pretendard Variable", Pretendard, sans-serif',
+                      fontSize: "14px",
+                      fontWeight: 500,
+                      marginLeft: "8px",
+                      marginBottom: "2px",
+                    }}
+                  >
+                    {CHARACTER_NAMES[selectedCharacter] || "AI"}
+                  </div>
+                  
+                  <div
+                    style={{
+                      maxWidth: "80%",
+                      padding: "12px 16px",
+                      borderRadius: "16px",
+                      background: "#fafafa",
+                      color: "#1d1d1d",
+                      fontFamily: '"Pretendard Variable", Pretendard, sans-serif',
+                      fontSize: "18px",
+                      fontWeight: 400,
+                      lineHeight: "24px",
+                      letterSpacing: "-0.3px",
+                    }}
+                  >
+                    <span className="inline-flex gap-1">
+                      <span className="animate-bounce" style={{ animationDelay: "0ms" }}>•</span>
+                      <span className="animate-bounce" style={{ animationDelay: "150ms" }}>•</span>
+                      <span className="animate-bounce" style={{ animationDelay: "300ms" }}>•</span>
+                    </span>
+                  </div>
+                </div>
+              )}
+            </>
           )}
         </div>
       </div>
 
-      {/* 배경 그라디언트 */}
+      {/* 입력창 배경 */}
       <div
-        className="w-full"
+        className="w-full flex flex-col justify-start items-center px-5"
         style={{
+          paddingTop: "24px",
           paddingBottom: "48px",
-          background:
-            "linear-gradient(to top, rgba(29, 29, 29, 1) 0%, rgba(29, 29, 29, 0.9) 50%, transparent 100%)",
+          backgroundColor: "rgba(255, 255, 255, 1)",
+          borderTop: "1px solid rgba(238, 238, 238, 1)",
         }}
       >
         {/* 입력창 영역 */}
@@ -184,8 +318,8 @@ export default function ChatHistory() {
               padding: "8px 4px 8px 12px",
               gap: "16px",
               borderRadius: "16px",
-              border: "1.5px solid #D3D3D3",
-              background: "#FFF",
+              border: "1.5px solid rgba(245, 245, 245, 1)",
+              background: "rgba(250, 250, 250, 1)",
               backdropFilter: "blur(10px)",
             }}
           >
@@ -197,7 +331,7 @@ export default function ChatHistory() {
               onFocus={() => setIsFocused(true)}
               onBlur={() => setIsFocused(false)}
               placeholder="무엇이든지 물어보세요."
-              className="flex-1 bg-transparent text-[#1d1d1d] placeholder-[#1d1d1d]/60 resize-none outline-none text-sm leading-relaxed max-h-32 scrollbar-hide"
+              className="flex-1 bg-transparent text-[#1d1d1d] placeholder-[#1d1d1d]/60 resize-none outline-none text-lg leading-relaxed max-h-32 scrollbar-hide"
               rows={1}
               disabled={isLoading}
               style={{
@@ -217,7 +351,7 @@ export default function ChatHistory() {
                 }
               }}
               disabled={isLoading || (isFocused && !inputValue.trim())}
-              className="flex justify-center items-center flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+              className="flex justify-center items-center flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden transition-all duration-300 ease-in-out"
               style={{
                 minWidth: isFocused || inputValue.trim() ? "48px" : "auto",
                 height: "48px",
@@ -243,6 +377,7 @@ export default function ChatHistory() {
                       fontWeight: 600,
                       lineHeight: "24px",
                       letterSpacing: "-0.32px",
+                      whiteSpace: "nowrap",
                     }}
                   >
                     통화

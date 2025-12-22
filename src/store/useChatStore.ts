@@ -31,7 +31,7 @@ export const useChatStore = create<ChatStore>((set) => ({
   currentEmotion: "neutral",
   currentAudio: null,
   isAudioPlaying: false,
-  selectedCharacter: "test", // 기본값: 서아
+  selectedCharacter: "jinyoung", // 기본값: 루피
   addMessage: (message) =>
     set((state) => ({
       messages: [

@@ -122,7 +122,7 @@ export default function Avatar() {
               const action = mixer.clipAction(clip);
               action.setLoop(THREE.LoopPingPong, Infinity); // 핑퐁 루핑: 앞으로 → 뒤로 자연스러운 왕복
               action.clampWhenFinished = false;
-              action.timeScale = 0.1; // 느린 속도
+              action.timeScale = 0.8; // 루피 애니메이션 속도
               actions[clip.name] = action;
               console.log(`📦 애니메이션 준비: ${clip.name} (핑퐁 루핑)`);
             });
