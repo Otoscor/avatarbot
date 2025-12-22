@@ -113,7 +113,7 @@ export default function Avatar() {
               happy: "smile.001",
               sad: "concern.001",
               angry: "concern.001",
-              surprised: "blush.001",
+              surprised: "smile.001", // blush.001 대신 smile.001 사용
             };
             
             // 모든 애니메이션 액션 생성 및 저장
@@ -487,10 +487,10 @@ export default function Avatar() {
       // 키워드가 없으면 감정 + 랜덤 요소
       const emotionAnimationMap: Record<Emotion, string[]> = {
         neutral: ['Idle_01.001'],
-        happy: ['smile.001', 'blush.001'],
+        happy: ['smile.001'], // blush.001 제거
         sad: ['concern.001'],
         angry: ['concern.001'],
-        surprised: ['blush.001', 'smile.001'],
+        surprised: ['smile.001'], // blush.001 제거
       };
       
       const candidates = emotionAnimationMap[emotion];

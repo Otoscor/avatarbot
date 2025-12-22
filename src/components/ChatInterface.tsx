@@ -1200,11 +1200,11 @@ export default function ChatInterface() {
       {/* 대화 시작 버튼 (초기 인사말용) */}
       {showGreetingButton && (
         <>
-          {/* 반투명 배경 */}
+          {/* 반투명 배경 (dimmed 강화 + blur 증가) */}
           <div
-            className="fixed inset-0 z-30 bg-black/30"
+            className="fixed inset-0 z-30 bg-black/60"
             style={{
-              backdropFilter: "blur(8px)",
+              backdropFilter: "blur(20px)",
             }}
           />
           
@@ -1234,38 +1234,34 @@ export default function ChatInterface() {
                 루피가 인사하고 싶어해요! 👋
               </div>
               
-              {/* 대화 시작 버튼 */}
+              {/* 대화 시작 버튼 (대화 버튼 스타일 적용) */}
               <button
                 onClick={handleStartConversation}
+                className="flex justify-center items-center transition-all duration-300 ease-in-out"
                 style={{
-                  display: "flex",
-                  padding: "16px 32px",
-                  justifyContent: "center",
-                  alignItems: "center",
+                  height: "48px",
+                  padding: "0 24px",
                   gap: "8px",
-                  borderRadius: "16px",
-                  background: "linear-gradient(135deg, #FF6B9D 0%, #FFA5C8 100%)",
-                  border: "2px solid rgba(255, 255, 255, 0.4)",
-                  boxShadow: "0 8px 24px rgba(255, 107, 157, 0.4), 0 4px 8px rgba(0, 0, 0, 0.2)",
+                  borderRadius: "12px",
+                  background: "linear-gradient(180deg, #8569F2 0%, #5A35EC 100%)",
+                  boxShadow: "0 2px 4px 0 rgba(255, 255, 255, 0.25) inset",
+                  border: "none",
                   cursor: "pointer",
-                  transition: "all 0.3s ease",
                   color: "#FFF",
-                  fontFamily: '"Noto Sans KR", "Pretendard Variable", Pretendard, sans-serif',
-                  fontSize: "18px",
-                  fontWeight: 600,
+                  fontFamily: '"Pretendard Variable", Pretendard, sans-serif',
+                  fontSize: "16px",
+                  fontWeight: 500,
                   lineHeight: "24px",
-                  letterSpacing: "-0.2px",
+                  letterSpacing: "-0.32px",
                 }}
                 onMouseEnter={(e) => {
-                  e.currentTarget.style.transform = "scale(1.05)";
-                  e.currentTarget.style.boxShadow = "0 12px 32px rgba(255, 107, 157, 0.5), 0 6px 12px rgba(0, 0, 0, 0.3)";
+                  e.currentTarget.style.opacity = "0.9";
                 }}
                 onMouseLeave={(e) => {
-                  e.currentTarget.style.transform = "scale(1)";
-                  e.currentTarget.style.boxShadow = "0 8px 24px rgba(255, 107, 157, 0.4), 0 4px 8px rgba(0, 0, 0, 0.2)";
+                  e.currentTarget.style.opacity = "1";
                 }}
               >
-                🎤 대화 시작하기
+                대화 시작
               </button>
               
               {/* 작은 설명 텍스트 */}
