@@ -634,10 +634,13 @@ export default function Avatar() {
       hasAudio: !!currentAudio,
       audioLength: currentAudio?.length,
       hasVrm: !!vrm,
+      isGLBModel: isGLBModel,
+      hasGltf: !!gltf,
     });
 
-    if (!currentAudio || !vrm) {
-      console.log("Avatar: 오디오 또는 VRM이 없어서 재생하지 않음");
+    // VRM 모델이거나 GLB 모델이면 오디오 재생 가능
+    if (!currentAudio || (!vrm && !isGLBModel)) {
+      console.log("Avatar: 오디오가 없거나 모델이 로드되지 않아서 재생하지 않음");
       return;
     }
 
@@ -884,7 +887,7 @@ export default function Avatar() {
       isBlinkingRef.current = false;
       blinkWeightRef.current = 0;
     };
-  }, [currentAudio, vrm, setAudioPlaying]);
+  }, [currentAudio, vrm, isGLBModel, gltf, setAudioPlaying]);
 
   // ===== useFrame: 애니메이션 루프 =====
   useFrame((state, delta) => {
