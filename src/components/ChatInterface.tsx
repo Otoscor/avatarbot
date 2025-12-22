@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef, useCallback } from "react";
 import { useChatStore } from "@/store/useChatStore";
-import { ArrowUp, Mic, MicOff, X, Check, LayoutGrid, MessageSquareText } from "lucide-react";
+import { ArrowUp, Mic, MicOff, X, Check, LayoutGrid, MessageSquareText, Shirt } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 
@@ -1310,7 +1310,7 @@ export default function ChatInterface() {
             opacity: 0.5, // 비활성화 표시
           }}
         >
-          <LayoutGrid className="w-6 h-6 text-[#1d1d1d]" fill="currentColor" />
+          <Shirt className="w-6 h-6 text-[#1d1d1d]" fill="currentColor" />
         </button>
       </div>
 
