@@ -309,6 +309,11 @@ export default function ChatInterface() {
     if (isListeningRef.current) return;
     // 음소거 상태면 시작하지 않음
     if (isMuted) return;
+    // TTS 재생 중이면 시작하지 않음 (중요!)
+    if (isAudioPlayingRef.current) {
+      console.log("⏸️ TTS 재생 중이므로 음성 인식 시작 대기");
+      return;
+    }
     // 권한이 거부된 경우 시작하지 않음
     if (permissionDeniedRef.current) {
       console.warn("마이크 권한이 거부되어 음성 인식을 시작할 수 없습니다.");
@@ -852,7 +857,7 @@ export default function ChatInterface() {
         !permissionDeniedRef.current // 권한이 거부되지 않았을 때만
       ) {
         console.log("음성 인식 자동 재시작 시도...");
-        // 약간의 지연 후 재시작 (브라우저 정책 준수)
+        // TTS 완전 종료 후 충분한 지연 (스피커 잔향 방지)
         setTimeout(() => {
           // 재시작 전에 다시 한 번 상태 확인
           if (
@@ -865,7 +870,7 @@ export default function ChatInterface() {
           ) {
             startRecognition();
           }
-        }, 100);
+        }, 800); // 100ms → 800ms로 증가 (TTS 완전 종료 대기)
       } else {
         autoRestartRef.current = false;
       }
@@ -928,6 +933,7 @@ export default function ChatInterface() {
       if (
         !isMuted &&
         !isListeningRef.current &&
+        !isAudioPlayingRef.current && // TTS 재생 중이 아닐 때만
         recognitionRef.current &&
         !permissionDeniedRef.current
       ) {
@@ -955,10 +961,29 @@ export default function ChatInterface() {
     };
   }, [resetSilenceTimer, startRecognition, isMuted, checkMicrophonePermission]);
 
-  // ref 업데이트
+  // ref 업데이트 및 TTS 종료 후 음성 인식 재시작
   useEffect(() => {
+    const wasPlaying = isAudioPlayingRef.current;
     isAudioPlayingRef.current = isAudioPlaying;
-  }, [isAudioPlaying]);
+
+    // TTS 재생이 끝났을 때 (true → false)
+    if (wasPlaying && !isAudioPlaying) {
+      console.log("🎤 TTS 재생 종료, 음성 인식 재시작 대기...");
+      // 충분한 지연 후 음성 인식 재시작
+      setTimeout(() => {
+        if (
+          !isMuted &&
+          !isListeningRef.current &&
+          !isLoadingRef.current &&
+          recognitionRef.current &&
+          !permissionDeniedRef.current
+        ) {
+          console.log("🎤 음성 인식 재시작");
+          startRecognition();
+        }
+      }, 800); // 스피커 잔향이 완전히 사라질 때까지 대기
+    }
+  }, [isAudioPlaying, isMuted, startRecognition]);
 
   useEffect(() => {
     isLoadingRef.current = isLoading;
@@ -1610,7 +1635,7 @@ export default function ChatInterface() {
                     return;
                   }
 
-                  // 약간의 지연 후 시작
+                  // 약간의 지연 후 시작 (TTS 재생 중이 아닐 때만)
                   setTimeout(() => {
                     if (
                       !isLoading &&
@@ -1621,7 +1646,7 @@ export default function ChatInterface() {
                     ) {
                       startRecognition();
                     }
-                  }, 300);
+                  }, 500); // 300ms → 500ms로 증가
                 } else {
                   // 음소거 활성화
                   setIsMuted(true);
