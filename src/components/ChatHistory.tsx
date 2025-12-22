@@ -301,7 +301,7 @@ export default function ChatHistory() {
       >
         {/* 입력창 영역 */}
         <div
-          className="w-full px-5"
+          className="w-full px-0"
           style={{ marginBottom: "0px" }}
         >
           <div

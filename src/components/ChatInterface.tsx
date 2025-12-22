@@ -1576,7 +1576,13 @@ export default function ChatInterface() {
       {/* 입력창 영역 */}
         <div
           className="fixed bottom-0 left-0 right-0 w-full pointer-events-auto px-5 z-10"
-          style={{ marginBottom: "48px", touchAction: 'auto' }}
+          style={{ 
+            marginBottom: "0px",
+            paddingTop: "16px",
+            paddingBottom: "48px",
+            background: "linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, rgba(0, 0, 0, 0.8) 100%)",
+            touchAction: 'auto' 
+          }}
         >
           <div
             className="flex items-center transition-all duration-300 ease-in-out"
