@@ -1,10 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef, useCallback } from "react";
+import { useState, useEffect, useRef, useCallback, Suspense } from "react";
 import { useChatStore } from "@/store/useChatStore";
 import { ArrowUp, Mic, MicOff, X, Check, LayoutGrid, MessageSquareText, Shirt } from "lucide-react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { Canvas } from "@react-three/fiber";
+import { Environment } from "@react-three/drei";
 
 // Web Speech API 타입 정의
 interface SpeechRecognition extends EventTarget {
@@ -1709,7 +1711,7 @@ export default function ChatInterface() {
                       </div>
                     )}
 
-                    {/* 썸네일 이미지 (오른쪽 배치) */}
+                    {/* 썸네일 이미지 (오른쪽 배치) - 실제 배경 렌더링 */}
                     <div
                       style={{
                         position: "absolute",
@@ -1717,11 +1719,18 @@ export default function ChatInterface() {
                         top: 0,
                         bottom: 0,
                         width: "50%",
-                        background: "linear-gradient(135deg, #89f7fe 0%, #66a6ff 100%)",
-                        backgroundSize: "cover",
-                        backgroundPosition: "center",
+                        overflow: "hidden",
                       }}
-                    />
+                    >
+                      <Canvas
+                        camera={{ position: [0, 0, 2], fov: 75 }}
+                        style={{ width: "100%", height: "100%" }}
+                      >
+                        <Suspense fallback={null}>
+                          <Environment preset="apartment" background />
+                        </Suspense>
+                      </Canvas>
+                    </div>
                   </div>
 
                   {/* 배경 이름 */}
@@ -1797,7 +1806,7 @@ export default function ChatInterface() {
                       </div>
                     )}
 
-                    {/* 썸네일 이미지 (오른쪽 배치) */}
+                    {/* 썸네일 이미지 (오른쪽 배치) - 실제 배경 렌더링 */}
                     <div
                       style={{
                         position: "absolute",
@@ -1805,11 +1814,18 @@ export default function ChatInterface() {
                         top: 0,
                         bottom: 0,
                         width: "50%",
-                        background: "linear-gradient(135deg, #0ba360 0%, #3cba92 100%)",
-                        backgroundSize: "cover",
-                        backgroundPosition: "center",
+                        overflow: "hidden",
                       }}
-                    />
+                    >
+                      <Canvas
+                        camera={{ position: [0, 0, 2], fov: 75 }}
+                        style={{ width: "100%", height: "100%" }}
+                      >
+                        <Suspense fallback={null}>
+                          <Environment preset="forest" background />
+                        </Suspense>
+                      </Canvas>
+                    </div>
                   </div>
 
                   {/* 배경 이름 */}
