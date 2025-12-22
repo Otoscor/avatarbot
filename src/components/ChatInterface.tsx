@@ -1050,31 +1050,23 @@ export default function ChatInterface() {
     setShowAudioPermissionModal(false);
   }, []);
 
-  // 초기 인사말 (처음 마운트 시 한 번만)
+  // 초기 인사말 상태 관리
+  const [showGreetingButton, setShowGreetingButton] = useState(false);
+  const greetingAudioRef = useRef<string | null>(null);
+
+  // 초기 인사말 준비 (음성은 버튼 클릭 시 재생)
   useEffect(() => {
     const hasGreeted = sessionStorage.getItem('hasGreeted');
     
     if (!hasGreeted && selectedCharacter === 'jinyoung') {
-      // 세션 중 한 번만 인사
+      // 세션 중 한 번만 인사 준비
       sessionStorage.setItem('hasGreeted', 'true');
       
-      // 약간의 지연 후 인사 (페이지 로드 완료 대기)
+      // 약간의 지연 후 인사 준비 (페이지 로드 완료 대기)
       setTimeout(async () => {
         const greetingText = "만나서 반가워요! 오늘의 대화 주제는 뭐에요?";
         
-        // 루피의 인사말 메시지 추가
-        addMessage({
-          role: "assistant",
-          content: greetingText,
-        });
-        
-        // 감정을 happy로 설정 (smile.001 애니메이션)
-        setEmotion("happy");
-        
-        // 자막 표시
-        setShowMessage(true);
-        
-        // TTS 생성 (API 호출)
+        // TTS 미리 생성 (API 호출)
         try {
           const response = await fetch("/api/chat", {
             method: "POST",
@@ -1100,17 +1092,46 @@ export default function ChatInterface() {
           if (response.ok) {
             const data = await response.json();
             
-            // 오디오만 설정 (메시지는 이미 추가됨)
+            // 오디오를 미리 저장 (버튼 클릭 시 재생)
             if (data.audio) {
-              setAudio(data.audio);
+              greetingAudioRef.current = data.audio;
+              console.log("✅ 인사말 TTS 준비 완료");
             }
           }
+          
+          // 루피의 인사말 메시지 추가
+          addMessage({
+            role: "assistant",
+            content: greetingText,
+          });
+          
+          // 자막 표시
+          setShowMessage(true);
+          
+          // "대화 시작" 버튼 표시
+          setShowGreetingButton(true);
         } catch (error) {
           console.error("초기 인사말 TTS 생성 실패:", error);
         }
-      }, 1500); // 1.5초 후 인사
+      }, 1500); // 1.5초 후 인사 준비
     }
   }, [selectedCharacter, addMessage, setEmotion, setAudio]);
+
+  // "대화 시작" 버튼 클릭 핸들러
+  const handleStartConversation = () => {
+    if (greetingAudioRef.current) {
+      // 감정을 happy로 설정 (smile.001 애니메이션)
+      setEmotion("happy");
+      
+      // 오디오 재생 (사용자 인터랙션으로 자동재생 정책 통과)
+      setAudio(greetingAudioRef.current);
+      
+      console.log("✅ 인사말 재생 시작 (사용자 클릭)");
+    }
+    
+    // 버튼 숨기기
+    setShowGreetingButton(false);
+  };
 
   // 컴포넌트 언마운트 시 타이머 정리
   useEffect(() => {
@@ -1175,6 +1196,96 @@ export default function ChatInterface() {
           background: backgroundGradient,
         }}
       />
+
+      {/* 대화 시작 버튼 (초기 인사말용) */}
+      {showGreetingButton && (
+        <>
+          {/* 반투명 배경 */}
+          <div
+            className="fixed inset-0 z-30 bg-black/30"
+            style={{
+              backdropFilter: "blur(8px)",
+            }}
+          />
+          
+          {/* 버튼 컨테이너 */}
+          <div
+            className="fixed inset-0 z-40 flex flex-col items-center justify-center pointer-events-none"
+          >
+            <div
+              className="pointer-events-auto flex flex-col items-center gap-6"
+              style={{
+                animation: "fadeIn 0.5s ease-in-out",
+              }}
+            >
+              {/* 안내 텍스트 */}
+              <div
+                style={{
+                  color: "#FFF",
+                  fontFamily: '"Noto Sans KR", "Pretendard Variable", Pretendard, sans-serif',
+                  fontSize: "18px",
+                  fontWeight: 500,
+                  lineHeight: "28px",
+                  textAlign: "center",
+                  textShadow: "0 2px 8px rgba(0, 0, 0, 0.3)",
+                  padding: "0 20px",
+                }}
+              >
+                루피가 인사하고 싶어해요! 👋
+              </div>
+              
+              {/* 대화 시작 버튼 */}
+              <button
+                onClick={handleStartConversation}
+                style={{
+                  display: "flex",
+                  padding: "16px 32px",
+                  justifyContent: "center",
+                  alignItems: "center",
+                  gap: "8px",
+                  borderRadius: "16px",
+                  background: "linear-gradient(135deg, #FF6B9D 0%, #FFA5C8 100%)",
+                  border: "2px solid rgba(255, 255, 255, 0.4)",
+                  boxShadow: "0 8px 24px rgba(255, 107, 157, 0.4), 0 4px 8px rgba(0, 0, 0, 0.2)",
+                  cursor: "pointer",
+                  transition: "all 0.3s ease",
+                  color: "#FFF",
+                  fontFamily: '"Noto Sans KR", "Pretendard Variable", Pretendard, sans-serif',
+                  fontSize: "18px",
+                  fontWeight: 600,
+                  lineHeight: "24px",
+                  letterSpacing: "-0.2px",
+                }}
+                onMouseEnter={(e) => {
+                  e.currentTarget.style.transform = "scale(1.05)";
+                  e.currentTarget.style.boxShadow = "0 12px 32px rgba(255, 107, 157, 0.5), 0 6px 12px rgba(0, 0, 0, 0.3)";
+                }}
+                onMouseLeave={(e) => {
+                  e.currentTarget.style.transform = "scale(1)";
+                  e.currentTarget.style.boxShadow = "0 8px 24px rgba(255, 107, 157, 0.4), 0 4px 8px rgba(0, 0, 0, 0.2)";
+                }}
+              >
+                🎤 대화 시작하기
+              </button>
+              
+              {/* 작은 설명 텍스트 */}
+              <div
+                style={{
+                  color: "rgba(255, 255, 255, 0.8)",
+                  fontFamily: '"Noto Sans KR", "Pretendard Variable", Pretendard, sans-serif',
+                  fontSize: "14px",
+                  fontWeight: 400,
+                  lineHeight: "20px",
+                  textAlign: "center",
+                  textShadow: "0 2px 4px rgba(0, 0, 0, 0.3)",
+                }}
+              >
+                클릭하면 루피의 목소리를 들을 수 있어요
+              </div>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* 우상단 캐릭터 선택 버튼 */}
       <div
