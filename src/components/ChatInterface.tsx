@@ -854,6 +854,9 @@ export default function ChatInterface() {
         return;
       }
 
+      // 모바일 환경에서는 자동 재시작 비활성화 (불안정성 방지)
+      const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      
       // 의도적으로 중지한 경우가 아니고, AI가 말하지 않고, 로딩 중이 아니고, 음소거 상태가 아닐 때만 재시작
       if (
         autoRestartRef.current &&
@@ -861,7 +864,8 @@ export default function ChatInterface() {
         !isLoadingRef.current &&
         recognitionRef.current && // recognition이 여전히 존재하는지 확인
         !isMuted && // 음소거 상태가 아닐 때만
-        !permissionDeniedRef.current // 권한이 거부되지 않았을 때만
+        !permissionDeniedRef.current && // 권한이 거부되지 않았을 때만
+        !isMobileDevice // 모바일에서는 자동 재시작 비활성화
       ) {
         console.log("음성 인식 자동 재시작 시도...");
         // TTS 완전 종료 후 충분한 지연 (스피커 잔향 방지)
@@ -880,6 +884,9 @@ export default function ChatInterface() {
         }, 800); // 100ms → 800ms로 증가 (TTS 완전 종료 대기)
       } else {
         autoRestartRef.current = false;
+        if (isMobileDevice) {
+          console.log("모바일 환경: 자동 재시작 비활성화됨");
+        }
       }
     };
 
@@ -935,8 +942,9 @@ export default function ChatInterface() {
       once: true,
     });
 
-    // 5초 후에도 상호작용이 없으면 자동 시작 시도
-    const autoStartTimer = setTimeout(() => {
+    // 5초 후에도 상호작용이 없으면 자동 시작 시도 (모바일 제외)
+    const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+    const autoStartTimer = !isMobileDevice ? setTimeout(() => {
       if (
         !isMuted &&
         !isListeningRef.current &&
@@ -950,11 +958,14 @@ export default function ChatInterface() {
           console.warn("자동 시작 실패, 사용자 상호작용 대기 중:", error);
         }
       }
-    }, 5000);
+    }, 5000) : null;
 
     return () => {
       if (silenceTimerRef.current) {
         clearTimeout(silenceTimerRef.current);
+      }
+      if (autoStartTimer) {
+        clearTimeout(autoStartTimer);
       }
       if (recognitionRef.current) {
         recognitionRef.current.stop();
@@ -1926,8 +1937,8 @@ export default function ChatInterface() {
           </div>
         </div>
       )}
-      {/* iOS 음성인식 미지원 토스트 */}
-      {isIOS && !isMuted && (
+      {/* 모바일 안내 토스트 */}
+      {isMobile && !isMuted && isListening && (
         <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 pointer-events-none">
           <div
             className="inline-flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg max-w-xs"
@@ -1945,7 +1956,7 @@ export default function ChatInterface() {
                 textAlign: "center",
               }}
             >
-              iOS에서는 음성 인식이 지원되지 않습니다. 텍스트로 입력해주세요.
+              {isIOS ? "iOS에서는 음성 인식이 지원되지 않습니다." : "말씀하신 후 마이크 버튼을 다시 눌러주세요."}
             </span>
           </div>
         </div>
@@ -2129,15 +2140,18 @@ export default function ChatInterface() {
                 if (isMuted) {
                   // 음소거 해제
                   setIsMuted(false);
-                  autoRestartRef.current = true;
+                  
+                  // 모바일 환경에서는 자동 재시작 비활성화
+                  const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+                  autoRestartRef.current = !isMobileDevice;
 
-                  // 마이크 권한 확인 (권한이 거부된 경우에도 강제로 다시 요청)
-                  const hasPermission = await checkMicrophonePermission(
-                    permissionDeniedRef.current
-                  );
-                  if (!hasPermission) {
-                    setIsMuted(true); // 권한이 없으면 음소거 상태 유지
-                    return;
+                  // 마이크 권한 확인 (한 번만, 이미 확인된 경우 스킵)
+                  if (!permissionDeniedRef.current) {
+                    const hasPermission = await checkMicrophonePermission(false);
+                    if (!hasPermission) {
+                      setIsMuted(true); // 권한이 없으면 음소거 상태 유지
+                      return;
+                    }
                   }
 
                   // 약간의 지연 후 시작 (TTS 재생 중이 아닐 때만)
@@ -2155,6 +2169,7 @@ export default function ChatInterface() {
                 } else {
                   // 음소거 활성화
                   setIsMuted(true);
+                  autoRestartRef.current = false; // 자동 재시작 비활성화
                   if (isListening) {
                     stopRecognition();
                   }
