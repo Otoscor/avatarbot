@@ -96,6 +96,7 @@ export default function ChatInterface() {
   const [showBackgroundModal, setShowBackgroundModal] = useState(false); // 배경 선택 모달
   const [showComingSoonToast, setShowComingSoonToast] = useState(false); // 준비 중 토스트
   const permissionDeniedRef = useRef<boolean>(false); // 권한 거부 ref (재시도 방지용)
+  const permissionGrantedRef = useRef<boolean>(false); // 권한 허용 ref (중복 확인 방지용)
   const audioContextRef = useRef<AudioContext | null>(null); // 오디오 컨텍스트 ref
   const speechSilenceTimerRef = useRef<NodeJS.Timeout | null>(null); // 음성 침묵 감지 타이머
   const {
@@ -250,6 +251,11 @@ export default function ChatInterface() {
   // 마이크 권한 확인 함수
   const checkMicrophonePermission = useCallback(
     async (forceRequest: boolean = false): Promise<boolean> => {
+      // 이미 권한이 허용된 경우 재확인하지 않음 (단, 강제 요청인 경우 제외)
+      if (permissionGrantedRef.current && !forceRequest) {
+        return true;
+      }
+      
       // 이미 권한이 거부된 경우 재시도하지 않음 (단, 강제 요청인 경우 제외)
       if (permissionDeniedRef.current && !forceRequest) {
         return false;
@@ -258,6 +264,7 @@ export default function ChatInterface() {
       // 강제 요청인 경우 상태 리셋
       if (forceRequest) {
         permissionDeniedRef.current = false;
+        permissionGrantedRef.current = false;
         setHasPermissionDenied(false);
       }
 
@@ -268,9 +275,11 @@ export default function ChatInterface() {
           });
           // 스트림 정리
           stream.getTracks().forEach((track) => track.stop());
-          // 권한 허용됨 - 상태 리셋
+          // 권한 허용됨 - 상태 설정
           permissionDeniedRef.current = false;
+          permissionGrantedRef.current = true; // 플래그 설정
           setHasPermissionDenied(false);
+          console.log("✅ 마이크 권한 허용됨 (최초 1회)");
           return true;
         }
         // getUserMedia가 없는 경우 (일부 환경) true 반환하여 시도
@@ -2243,7 +2252,7 @@ export default function ChatInterface() {
                 placeholder="무엇이든지 물어보세요."
                 className="flex-1 bg-transparent text-[#1d1d1d] placeholder-[#1d1d1d]/60 resize-none outline-none text-lg leading-relaxed max-h-32 scrollbar-hide"
                 rows={1}
-                disabled={isLoading || isAudioPlaying}
+                readOnly={isLoading || isAudioPlaying}
                 style={{
                   fontFamily: '"Pretendard Variable", Pretendard, sans-serif',
                 }}
