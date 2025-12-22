@@ -329,6 +329,11 @@ export default function ChatInterface() {
       console.log("⏸️ TTS 재생 중이므로 음성 인식 시작 대기");
       return;
     }
+    // Input이 포커스 중이면 시작하지 않음 (키보드 입력 우선)
+    if (isFocused) {
+      console.log("⏸️ Input 포커스 중이므로 음성 인식 시작하지 않음");
+      return;
+    }
     // 권한이 거부된 경우 시작하지 않음
     if (permissionDeniedRef.current) {
       console.warn("마이크 권한이 거부되어 음성 인식을 시작할 수 없습니다.");
@@ -371,7 +376,7 @@ export default function ChatInterface() {
       isListeningRef.current = false;
       setIsListening(false);
     }
-  }, [isMuted, checkMicrophonePermission]);
+  }, [isMuted, isFocused, checkMicrophonePermission]);
 
   // 음성 인식 중지
   const stopRecognition = () => {
@@ -879,16 +884,19 @@ export default function ChatInterface() {
         console.log("음성 인식 자동 재시작 시도...");
         // TTS 완전 종료 후 충분한 지연 (스피커 잔향 방지)
         setTimeout(() => {
-          // 재시작 전에 다시 한 번 상태 확인
+          // 재시작 전에 다시 한 번 상태 확인 (input 포커스 체크 추가!)
           if (
             !isAudioPlayingRef.current &&
             !isLoadingRef.current &&
             recognitionRef.current &&
             !isListeningRef.current &&
             !isMuted &&
-            !permissionDeniedRef.current
+            !permissionDeniedRef.current &&
+            !isFocused // Input이 포커스 중이 아닐 때만 재시작
           ) {
             startRecognition();
+          } else if (isFocused) {
+            console.log("⏸️ Input 포커스 중이므로 자동 재시작 취소");
           }
         }, 800); // 100ms → 800ms로 증가 (TTS 완전 종료 대기)
       } else {
@@ -932,10 +940,10 @@ export default function ChatInterface() {
         return;
       }
 
-      if (!isMuted && !isListeningRef.current) {
+      if (!isMuted && !isListeningRef.current && !isFocused) {
         // 약간의 지연 후 시작 (브라우저 정책 준수)
         setTimeout(() => {
-          if (!permissionDeniedRef.current) {
+          if (!permissionDeniedRef.current && !isFocused) {
             startRecognition();
           }
         }, 300);
@@ -959,7 +967,8 @@ export default function ChatInterface() {
         !isListeningRef.current &&
         !isAudioPlayingRef.current && // TTS 재생 중이 아닐 때만
         recognitionRef.current &&
-        !permissionDeniedRef.current
+        !permissionDeniedRef.current &&
+        !isFocused // Input 포커스 중이 아닐 때만
       ) {
         try {
           startRecognition();
@@ -1012,14 +1021,17 @@ export default function ChatInterface() {
           !isListeningRef.current &&
           !isLoadingRef.current &&
           recognitionRef.current &&
-          !permissionDeniedRef.current
+          !permissionDeniedRef.current &&
+          !isFocused // Input 포커스 중이 아닐 때만 재시작
         ) {
           console.log("🎤 음성 인식 재시작");
           startRecognition();
+        } else if (isFocused) {
+          console.log("⏸️ Input 포커스 중이므로 음성 인식 재시작 안 함");
         }
       }, 800); // 스피커 잔향이 완전히 사라질 때까지 대기
     }
-  }, [isAudioPlaying, isMuted, startRecognition]);
+  }, [isAudioPlaying, isMuted, isFocused, startRecognition]);
 
   useEffect(() => {
     isLoadingRef.current = isLoading;
@@ -2236,7 +2248,12 @@ export default function ChatInterface() {
             >
               <textarea
                 value={inputValue}
-                onChange={(e) => setInputValue(e.target.value)}
+                onChange={(e) => {
+                  // readOnly 상태가 아닐 때만 값 변경 허용
+                  if (!isLoading && !isAudioPlaying) {
+                    setInputValue(e.target.value);
+                  }
+                }}
                 onKeyPress={handleKeyPress}
                 onFocus={() => {
                   // Input 포커스 시 음성 인식 중지
@@ -2245,14 +2262,15 @@ export default function ChatInterface() {
                     autoRestartRef.current = false;
                   }
                   setIsFocused(true);
+                  console.log("✏️ Input 포커스됨 - 음성 인식 중지");
                 }}
                 onBlur={() => {
                   setIsFocused(false);
+                  console.log("🔒 Input 포커스 해제");
                 }}
                 placeholder="무엇이든지 물어보세요."
                 className="flex-1 bg-transparent text-[#1d1d1d] placeholder-[#1d1d1d]/60 resize-none outline-none text-lg leading-relaxed max-h-32 scrollbar-hide"
                 rows={1}
-                readOnly={isLoading || isAudioPlaying}
                 style={{
                   fontFamily: '"Pretendard Variable", Pretendard, sans-serif',
                 }}
