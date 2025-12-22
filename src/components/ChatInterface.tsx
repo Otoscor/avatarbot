@@ -75,10 +75,6 @@ export default function ChatInterface() {
     useState<ListeningState>("listening");
   const [hasPermissionDenied, setHasPermissionDenied] = useState(false); // 권한 거부 상태
   const [showPermissionToast, setShowPermissionToast] = useState(false); // 권한 토스트 표시 여부
-  
-  // 모바일 환경 감지
-  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-  const isIOS = /iPhone|iPad|iPod/i.test(navigator.userAgent);
   const recognitionRef = useRef<SpeechRecognition | null>(null);
   const silenceTimerRef = useRef<NodeJS.Timeout | null>(null);
   const autoRestartRef = useRef<boolean>(false); // 자동 재시작 플래그
@@ -96,8 +92,6 @@ export default function ChatInterface() {
   const [showBackgroundModal, setShowBackgroundModal] = useState(false); // 배경 선택 모달
   const [showComingSoonToast, setShowComingSoonToast] = useState(false); // 준비 중 토스트
   const permissionDeniedRef = useRef<boolean>(false); // 권한 거부 ref (재시도 방지용)
-  const permissionGrantedRef = useRef<boolean>(false); // 권한 허용 ref (중복 확인 방지용)
-  const isFocusedRef = useRef<boolean>(false); // 포커스 상태 ref (실시간 체크용)
   const audioContextRef = useRef<AudioContext | null>(null); // 오디오 컨텍스트 ref
   const speechSilenceTimerRef = useRef<NodeJS.Timeout | null>(null); // 음성 침묵 감지 타이머
   const {
@@ -252,11 +246,6 @@ export default function ChatInterface() {
   // 마이크 권한 확인 함수
   const checkMicrophonePermission = useCallback(
     async (forceRequest: boolean = false): Promise<boolean> => {
-      // 이미 권한이 허용된 경우 재확인하지 않음 (단, 강제 요청인 경우 제외)
-      if (permissionGrantedRef.current && !forceRequest) {
-        return true;
-      }
-      
       // 이미 권한이 거부된 경우 재시도하지 않음 (단, 강제 요청인 경우 제외)
       if (permissionDeniedRef.current && !forceRequest) {
         return false;
@@ -265,7 +254,6 @@ export default function ChatInterface() {
       // 강제 요청인 경우 상태 리셋
       if (forceRequest) {
         permissionDeniedRef.current = false;
-        permissionGrantedRef.current = false;
         setHasPermissionDenied(false);
       }
 
@@ -276,11 +264,9 @@ export default function ChatInterface() {
           });
           // 스트림 정리
           stream.getTracks().forEach((track) => track.stop());
-          // 권한 허용됨 - 상태 설정
+          // 권한 허용됨 - 상태 리셋
           permissionDeniedRef.current = false;
-          permissionGrantedRef.current = true; // 플래그 설정
           setHasPermissionDenied(false);
-          console.log("✅ 마이크 권한 허용됨 (최초 1회)");
           return true;
         }
         // getUserMedia가 없는 경우 (일부 환경) true 반환하여 시도
@@ -330,11 +316,6 @@ export default function ChatInterface() {
       console.log("⏸️ TTS 재생 중이므로 음성 인식 시작 대기");
       return;
     }
-    // Input이 포커스 중이면 시작하지 않음 (키보드 입력 우선) - ref로 체크
-    if (isFocusedRef.current) {
-      console.log("⏸️ Input 포커스 중이므로 음성 인식 시작하지 않음");
-      return;
-    }
     // 권한이 거부된 경우 시작하지 않음
     if (permissionDeniedRef.current) {
       console.warn("마이크 권한이 거부되어 음성 인식을 시작할 수 없습니다.");
@@ -377,7 +358,7 @@ export default function ChatInterface() {
       isListeningRef.current = false;
       setIsListening(false);
     }
-  }, [isMuted, checkMicrophonePermission]); // isFocused 제거 (ref 사용)
+  }, [isMuted, checkMicrophonePermission]);
 
   // 음성 인식 중지
   const stopRecognition = () => {
@@ -396,13 +377,6 @@ export default function ChatInterface() {
 
   // 음성 인식 초기화
   useEffect(() => {
-    // iOS Safari는 Web Speech API를 지원하지 않으므로 초기화하지 않음
-    if (isIOS) {
-      console.warn("iOS Safari는 음성 인식을 지원하지 않습니다. 텍스트 입력을 사용하세요.");
-      setIsMuted(true); // iOS에서는 기본적으로 음소거 상태로 시작
-      return;
-    }
-    
     // 브라우저 호환성 확인
     const SpeechRecognition =
       window.SpeechRecognition || (window as any).webkitSpeechRecognition;
@@ -869,9 +843,6 @@ export default function ChatInterface() {
         return;
       }
 
-      // 모바일 환경에서는 자동 재시작 비활성화 (불안정성 방지)
-      const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      
       // 의도적으로 중지한 경우가 아니고, AI가 말하지 않고, 로딩 중이 아니고, 음소거 상태가 아닐 때만 재시작
       if (
         autoRestartRef.current &&
@@ -879,32 +850,25 @@ export default function ChatInterface() {
         !isLoadingRef.current &&
         recognitionRef.current && // recognition이 여전히 존재하는지 확인
         !isMuted && // 음소거 상태가 아닐 때만
-        !permissionDeniedRef.current && // 권한이 거부되지 않았을 때만
-        !isMobileDevice // 모바일에서는 자동 재시작 비활성화
+        !permissionDeniedRef.current // 권한이 거부되지 않았을 때만
       ) {
         console.log("음성 인식 자동 재시작 시도...");
         // TTS 완전 종료 후 충분한 지연 (스피커 잔향 방지)
         setTimeout(() => {
-          // 재시작 전에 다시 한 번 상태 확인 (input 포커스 체크 추가!)
+          // 재시작 전에 다시 한 번 상태 확인
           if (
             !isAudioPlayingRef.current &&
             !isLoadingRef.current &&
             recognitionRef.current &&
             !isListeningRef.current &&
             !isMuted &&
-            !permissionDeniedRef.current &&
-            !isFocusedRef.current // ref로 체크 (더 안정적)
+            !permissionDeniedRef.current
           ) {
             startRecognition();
-          } else if (isFocusedRef.current) {
-            console.log("⏸️ Input 포커스 중이므로 자동 재시작 취소");
           }
         }, 800); // 100ms → 800ms로 증가 (TTS 완전 종료 대기)
       } else {
         autoRestartRef.current = false;
-        if (isMobileDevice) {
-          console.log("모바일 환경: 자동 재시작 비활성화됨");
-        }
       }
     };
 
@@ -935,24 +899,16 @@ export default function ChatInterface() {
 
     // 사용자 상호작용 후 시작 (iOS Safari 호환성)
     // 페이지 로드 시 자동 시작 대신, 사용자가 마이크 버튼을 클릭하거나 페이지와 상호작용한 후 시작
-    const handleUserInteraction = async (event: MouseEvent | TouchEvent) => {
-      // Input/textarea 클릭은 무시 (키보드 입력 방해 방지)
-      const target = event.target as HTMLElement;
-      if (target.tagName === 'TEXTAREA' || target.tagName === 'INPUT') {
-        console.log("⏸️ Input 요소 클릭 감지 - 음성 인식 자동 시작 안 함");
-        return;
-      }
-      
+    const handleUserInteraction = async () => {
       // 권한이 거부된 경우 시작하지 않음
       if (permissionDeniedRef.current) {
         return;
       }
 
-      if (!isMuted && !isListeningRef.current && !isFocusedRef.current) {
+      if (!isMuted && !isListeningRef.current) {
         // 약간의 지연 후 시작 (브라우저 정책 준수)
         setTimeout(() => {
-          if (!permissionDeniedRef.current && !isFocusedRef.current) {
-            console.log("사용자 상호작용 후 음성 인식 시작");
+          if (!permissionDeniedRef.current) {
             startRecognition();
           }
         }, 300);
@@ -963,21 +919,19 @@ export default function ChatInterface() {
     };
 
     // 사용자 상호작용 대기
-    document.addEventListener("click", handleUserInteraction as EventListener, { once: true });
-    document.addEventListener("touchstart", handleUserInteraction as EventListener, {
+    document.addEventListener("click", handleUserInteraction, { once: true });
+    document.addEventListener("touchstart", handleUserInteraction, {
       once: true,
     });
 
-    // 5초 후에도 상호작용이 없으면 자동 시작 시도 (모바일 제외)
-    const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-    const autoStartTimer = !isMobileDevice ? setTimeout(() => {
+    // 5초 후에도 상호작용이 없으면 자동 시작 시도
+    const autoStartTimer = setTimeout(() => {
       if (
         !isMuted &&
         !isListeningRef.current &&
         !isAudioPlayingRef.current && // TTS 재생 중이 아닐 때만
         recognitionRef.current &&
-        !permissionDeniedRef.current &&
-        !isFocusedRef.current // ref로 체크 (더 안정적)
+        !permissionDeniedRef.current
       ) {
         try {
           startRecognition();
@@ -985,22 +939,20 @@ export default function ChatInterface() {
           console.warn("자동 시작 실패, 사용자 상호작용 대기 중:", error);
         }
       }
-    }, 5000) : null;
+    }, 5000);
 
     return () => {
       if (silenceTimerRef.current) {
         clearTimeout(silenceTimerRef.current);
-      }
-      if (autoStartTimer) {
-        clearTimeout(autoStartTimer);
       }
       if (recognitionRef.current) {
         recognitionRef.current.stop();
         recognitionRef.current = null;
       }
       // 이벤트 리스너 정리
-      document.removeEventListener("click", handleUserInteraction as EventListener);
-      document.removeEventListener("touchstart", handleUserInteraction as EventListener);
+      document.removeEventListener("click", handleUserInteraction);
+      document.removeEventListener("touchstart", handleUserInteraction);
+      document.removeEventListener("touchend", handleUserInteraction);
       clearTimeout(autoStartTimer);
     };
   }, [resetSilenceTimer, startRecognition, isMuted, checkMicrophonePermission]);
@@ -1029,17 +981,14 @@ export default function ChatInterface() {
           !isListeningRef.current &&
           !isLoadingRef.current &&
           recognitionRef.current &&
-          !permissionDeniedRef.current &&
-          !isFocusedRef.current // ref로 체크 (더 안정적)
+          !permissionDeniedRef.current
         ) {
           console.log("🎤 음성 인식 재시작");
           startRecognition();
-        } else if (isFocusedRef.current) {
-          console.log("⏸️ Input 포커스 중이므로 음성 인식 재시작 안 함");
         }
       }, 800); // 스피커 잔향이 완전히 사라질 때까지 대기
     }
-  }, [isAudioPlaying, isMuted, startRecognition]); // isFocused 제거 (ref 사용)
+  }, [isAudioPlaying, isMuted, startRecognition]);
 
   useEffect(() => {
     isLoadingRef.current = isLoading;
@@ -1966,31 +1915,6 @@ export default function ChatInterface() {
           </div>
         </div>
       )}
-      {/* 모바일 안내 토스트 */}
-      {isMobile && !isMuted && isListening && (
-        <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 pointer-events-none">
-          <div
-            className="inline-flex items-center gap-2 px-4 py-3 rounded-lg shadow-lg max-w-xs"
-            style={{
-              background: "rgba(0, 0, 0, 0.9)",
-              backdropFilter: "blur(10px)",
-            }}
-          >
-            <span
-              style={{
-                color: "#FFF",
-                fontFamily: '"Pretendard Variable", Pretendard, sans-serif',
-                fontSize: "13px",
-                fontWeight: 400,
-                textAlign: "center",
-              }}
-            >
-              {isIOS ? "iOS에서는 음성 인식이 지원되지 않습니다." : "말씀하신 후 마이크 버튼을 다시 눌러주세요."}
-            </span>
-          </div>
-        </div>
-      )}
-      
       {/* 권한 거부 토스트 메시지 */}
       {showPermissionToast && (
         <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 pointer-events-none">
@@ -2169,18 +2093,15 @@ export default function ChatInterface() {
                 if (isMuted) {
                   // 음소거 해제
                   setIsMuted(false);
-                  
-                  // 모바일 환경에서는 자동 재시작 비활성화
-                  const isMobileDevice = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-                  autoRestartRef.current = !isMobileDevice;
+                  autoRestartRef.current = true;
 
-                  // 마이크 권한 확인 (한 번만, 이미 확인된 경우 스킵)
-                  if (!permissionDeniedRef.current) {
-                    const hasPermission = await checkMicrophonePermission(false);
-                    if (!hasPermission) {
-                      setIsMuted(true); // 권한이 없으면 음소거 상태 유지
-                      return;
-                    }
+                  // 마이크 권한 확인 (권한이 거부된 경우에도 강제로 다시 요청)
+                  const hasPermission = await checkMicrophonePermission(
+                    permissionDeniedRef.current
+                  );
+                  if (!hasPermission) {
+                    setIsMuted(true); // 권한이 없으면 음소거 상태 유지
+                    return;
                   }
 
                   // 약간의 지연 후 시작 (TTS 재생 중이 아닐 때만)
@@ -2198,7 +2119,6 @@ export default function ChatInterface() {
                 } else {
                   // 음소거 활성화
                   setIsMuted(true);
-                  autoRestartRef.current = false; // 자동 재시작 비활성화
                   if (isListening) {
                     stopRecognition();
                   }
@@ -2256,21 +2176,8 @@ export default function ChatInterface() {
             >
               <textarea
                 value={inputValue}
-                onChange={(e) => {
-                  // readOnly 상태가 아닐 때만 값 변경 허용
-                  if (!isLoading && !isAudioPlaying) {
-                    setInputValue(e.target.value);
-                  }
-                }}
+                onChange={(e) => setInputValue(e.target.value)}
                 onKeyPress={handleKeyPress}
-                onClick={(e) => {
-                  // 클릭 시 이벤트 전파 방지 (handleUserInteraction 방지)
-                  e.stopPropagation();
-                }}
-                onTouchStart={(e) => {
-                  // 터치 시작 시 이벤트 전파 방지
-                  e.stopPropagation();
-                }}
                 onFocus={() => {
                   // Input 포커스 시 음성 인식 중지
                   if (isListening) {
@@ -2278,17 +2185,14 @@ export default function ChatInterface() {
                     autoRestartRef.current = false;
                   }
                   setIsFocused(true);
-                  isFocusedRef.current = true; // ref도 업데이트
-                  console.log("✏️ Input 포커스됨 - 음성 인식 중지");
                 }}
                 onBlur={() => {
                   setIsFocused(false);
-                  isFocusedRef.current = false; // ref도 업데이트
-                  console.log("🔒 Input 포커스 해제");
                 }}
                 placeholder="무엇이든지 물어보세요."
                 className="flex-1 bg-transparent text-[#1d1d1d] placeholder-[#1d1d1d]/60 resize-none outline-none text-lg leading-relaxed max-h-32 scrollbar-hide"
                 rows={1}
+                disabled={isLoading || isAudioPlaying}
                 style={{
                   fontFamily: '"Pretendard Variable", Pretendard, sans-serif',
                 }}

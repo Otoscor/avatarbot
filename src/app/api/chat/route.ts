@@ -207,7 +207,7 @@ export async function POST(request: NextRequest) {
       test: "nova", // 서아: 밝고 명랑한 목소리
       jinyoung: "shimmer", // 루피: 부드럽고 상냥한 목소리
     };
-
+    
     // 감정 매핑 함수 (Typecast용)
     const mapEmotionToTypecast = (emotion: string): string => {
       const emotionMap: { [key: string]: string } = {
@@ -273,15 +273,15 @@ export async function POST(request: NextRequest) {
         const selectedVoice = openaiVoiceMap[selectedCharacter] || "shimmer";
         console.log("OpenAI Voice:", selectedVoice);
 
-        const ttsResponse = await openai.audio.speech.create({
+      const ttsResponse = await openai.audio.speech.create({
           model: "tts-1-hd",
-          voice: selectedVoice,
-          input: text,
+        voice: selectedVoice,
+        input: text,
           speed: 1.0,
-        });
+      });
 
-        const audioBuffer = Buffer.from(await ttsResponse.arrayBuffer());
-        audioBase64 = audioBuffer.toString("base64");
+      const audioBuffer = Buffer.from(await ttsResponse.arrayBuffer());
+      audioBase64 = audioBuffer.toString("base64");
         console.log("✅ OpenAI TTS 생성 성공! 오디오 길이:", audioBase64.length);
       }
     } catch (ttsError: any) {

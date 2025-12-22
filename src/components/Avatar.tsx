@@ -722,21 +722,13 @@ export default function Avatar() {
     console.log("Avatar: 오디오 재생 시작");
     const playAudio = async () => {
       try {
-        // AudioContext 활성화 (모바일 환경에서 중요)
+        // AudioContext 활성화
         if (audioContextRef.current?.state === "suspended") {
-          console.log("Avatar: AudioContext suspended, 재개 시도...");
           await audioContextRef.current.resume();
-          console.log("Avatar: AudioContext 재개됨, 상태:", audioContextRef.current.state);
-        }
-        
-        // 모바일 환경에서 추가 대기
-        if (/iPhone|iPad|iPod|Android/i.test(navigator.userAgent)) {
-          await new Promise(resolve => setTimeout(resolve, 100));
         }
         
         // 오디오가 충분히 로드될 때까지 대기
         if (audio.readyState < 3) { // HAVE_FUTURE_DATA
-          console.log("Avatar: 오디오 로딩 대기 중... readyState:", audio.readyState);
           await new Promise((resolve) => {
             audio.addEventListener("canplay", resolve, { once: true });
           });
@@ -923,7 +915,88 @@ export default function Avatar() {
       }
       
       // GLB 모델의 립싱크 및 추가 애니메이션
-      // TODO: GLB 모델의 MorphTargets를 사용한 립싱크 구현
+      // GLB 모델의 MorphTargets를 사용한 립싱크 구현
+      // 루피 GLB 모델에 MorphTargets가 있으면 활용, 없으면 턱 본 사용
+      if (gltf) {
+        gltf.scene.traverse((object) => {
+          if ((object as THREE.Mesh).isMesh) {
+            const mesh = object as THREE.Mesh;
+            if (mesh.morphTargetDictionary && mesh.morphTargetInfluences) {
+              const volume = volumeRef.current;
+              const isAudioActive = audioRef.current && !audioRef.current.paused;
+              
+              Object.keys(mesh.morphTargetDictionary).forEach((morphName) => {
+                const index = mesh.morphTargetDictionary[morphName];
+                const nameLower = morphName.toLowerCase();
+                
+                let targetWeight = 0;
+                
+                // 오디오 재생 중일 때만 립싱크
+                if (isAudioActive && volume > 0.05) {
+                  // 입 관련 MorphTargets
+                  if (nameLower.includes("mouth") || 
+                      nameLower.includes("lip") ||
+                      nameLower.includes("aa") ||
+                      nameLower.includes("a") ||
+                      nameLower.includes("o") ||
+                      nameLower.includes("open")) {
+                    targetWeight = Math.min(volume * 1.5, 1.0);
+                  }
+                }
+                
+                // 부드럽게 전환
+                const currentWeight = mesh.morphTargetInfluences[index];
+                mesh.morphTargetInfluences[index] = THREE.MathUtils.lerp(
+                  currentWeight,
+                  targetWeight,
+                  0.3
+                );
+              });
+            }
+          }
+        });
+      }
+      
+      // 턱 본을 이용한 립싱크 (MorphTargets가 없는 경우 대체)
+      if (gltf && selectedCharacter === "jinyoung") {
+        const volume = volumeRef.current;
+        const isAudioActive = audioRef.current && !audioRef.current.paused;
+        
+        gltf.scene.traverse((object: any) => {
+          if (!object.name) return;
+          const name = object.name.toLowerCase();
+          
+          // 턱 본 찾기
+          if (name.includes("jaw") || 
+              name.includes("chin") || 
+              name.includes("j_bip_c_jaw") ||
+              name === "j_bip_c_head") { // 머리 본도 확인
+            
+            if (isAudioActive && volume > 0.05) {
+              // 오디오 볼륨에 따라 턱을 벌림
+              const targetRotation = volume * 0.3; // 최대 0.3 라디안 (약 17도)
+              
+              if (object.rotation) {
+                // 현재 회전값을 부드럽게 타겟으로 이동
+                object.rotation.x = THREE.MathUtils.lerp(
+                  object.rotation.x,
+                  targetRotation,
+                  0.3
+                );
+              }
+            } else {
+              // 오디오가 없으면 입 다물기
+              if (object.rotation) {
+                object.rotation.x = THREE.MathUtils.lerp(
+                  object.rotation.x,
+                  0,
+                  0.2
+                );
+              }
+            }
+          }
+        });
+      }
       
       return; // GLB 모델은 여기서 종료 (본 직접 조작 안 함)
     }
