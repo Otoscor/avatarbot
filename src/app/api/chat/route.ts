@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import OpenAI from "openai";
+import axios from "axios";
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -133,36 +134,117 @@ export async function POST(request: NextRequest) {
     const parsedResponse = JSON.parse(content);
     const text = parsedResponse.text;
 
-    // 캐릭터별 TTS 음성 설정
-    const voiceMap: { [key: string]: "alloy" | "echo" | "fable" | "onyx" | "nova" | "shimmer" } = {
+    // 캐릭터별 TTS 설정
+    const typecastActorMap: { [key: string]: string | undefined } = {
+      test: process.env.TYPECAST_ACTOR_ID_SEOA,
+      jinyoung: process.env.TYPECAST_ACTOR_ID_LUPY,
+    };
+
+    const openaiVoiceMap: { [key: string]: "alloy" | "echo" | "fable" | "onyx" | "nova" | "shimmer" } = {
       test: "nova", // 서아: 밝고 명랑한 목소리
       jinyoung: "shimmer", // 루피: 부드럽고 상냥한 목소리
     };
-    
-    const selectedVoice = voiceMap[selectedCharacter] || "shimmer";
+
+    // 감정 매핑 함수 (Typecast용)
+    const mapEmotionToTypecast = (emotion: string): string => {
+      const emotionMap: { [key: string]: string } = {
+        happy: "happy",
+        sad: "sad",
+        angry: "angry",
+        neutral: "neutral",
+        surprised: "surprised",
+      };
+      return emotionMap[emotion] || "neutral";
+    };
 
     // TTS를 사용하여 음성 생성
     let audioBase64 = "";
+    const typecastApiKey = process.env.TYPECAST_API_KEY;
+    const typecastActorId = typecastActorMap[selectedCharacter];
+    const useTypecast = typecastApiKey && typecastActorId;
+
     try {
       console.log("=== TTS 생성 시작 ===");
+      console.log("TTS 엔진:", useTypecast ? "Typecast" : "OpenAI");
       console.log("캐릭터:", selectedCharacter);
-      console.log("음성:", selectedVoice);
       console.log("텍스트:", text);
-      
-      const ttsResponse = await openai.audio.speech.create({
-        model: "tts-1-hd", // HD 품질
-        voice: selectedVoice,
-        input: text,
-        speed: 1.0, // 자연스러운 속도
+
+      if (useTypecast) {
+        // Typecast TTS 사용
+        console.log("Typecast Actor ID:", typecastActorId);
+        console.log("감정:", parsedResponse.emotion);
+
+        const ttsResponse = await axios.post(
+          "https://typecast.ai/api/speak",
+          {
+            actor_id: typecastActorId,
+            text: text,
+            lang: "ko-KR",
+            tempo: selectedCharacter === "jinyoung" ? 1.05 : 1.0, // 루피는 약간 빠르게
+            volume: 100,
+            pitch: selectedCharacter === "jinyoung" ? 1 : 0, // 루피는 약간 높게
+            xapi_hd: true,
+            max_seconds: 60,
+            style_properties: {
+              emotion: mapEmotionToTypecast(parsedResponse.emotion),
+              emotion_strength: 0.7,
+            },
+          },
+          {
+            headers: {
+              Authorization: `Bearer ${typecastApiKey}`,
+              "Content-Type": "application/json",
+            },
+            responseType: "arraybuffer",
+            timeout: 30000, // 30초 타임아웃
+          }
+        );
+
+        audioBase64 = Buffer.from(ttsResponse.data).toString("base64");
+        console.log("✅ Typecast TTS 생성 성공! 오디오 길이:", audioBase64.length);
+      } else {
+        // OpenAI TTS 사용 (폴백)
+        const selectedVoice = openaiVoiceMap[selectedCharacter] || "shimmer";
+        console.log("OpenAI Voice:", selectedVoice);
+
+        const ttsResponse = await openai.audio.speech.create({
+          model: "tts-1-hd",
+          voice: selectedVoice,
+          input: text,
+          speed: 1.0,
+        });
+
+        const audioBuffer = Buffer.from(await ttsResponse.arrayBuffer());
+        audioBase64 = audioBuffer.toString("base64");
+        console.log("✅ OpenAI TTS 생성 성공! 오디오 길이:", audioBase64.length);
+      }
+    } catch (ttsError: any) {
+      console.error("❌ TTS 생성 오류:", {
+        engine: useTypecast ? "Typecast" : "OpenAI",
+        status: ttsError.response?.status,
+        message: ttsError.response?.data || ttsError.message,
       });
 
-      const audioBuffer = Buffer.from(await ttsResponse.arrayBuffer());
-      audioBase64 = audioBuffer.toString("base64");
-      
-      console.log("✅ TTS 생성 성공! 오디오 길이:", audioBase64.length);
-    } catch (ttsError) {
-      console.error("❌ TTS 생성 오류:", ttsError);
-      // TTS 실패해도 텍스트 응답은 반환
+      // Typecast 실패 시 OpenAI로 폴백
+      if (useTypecast) {
+        try {
+          console.log("⚠️ Typecast 실패, OpenAI TTS로 폴백 시도...");
+          const selectedVoice = openaiVoiceMap[selectedCharacter] || "shimmer";
+
+          const ttsResponse = await openai.audio.speech.create({
+            model: "tts-1-hd",
+            voice: selectedVoice,
+            input: text,
+            speed: 1.0,
+          });
+
+          const audioBuffer = Buffer.from(await ttsResponse.arrayBuffer());
+          audioBase64 = audioBuffer.toString("base64");
+          console.log("✅ OpenAI TTS 폴백 성공! 오디오 길이:", audioBase64.length);
+        } catch (fallbackError) {
+          console.error("❌ OpenAI TTS 폴백도 실패:", fallbackError);
+        }
+      }
     }
 
     return NextResponse.json({
