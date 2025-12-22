@@ -155,6 +155,7 @@ export default function ChatInterface() {
         },
         body: JSON.stringify({
           messages: apiMessages,
+          character: selectedCharacter,
         }),
       });
 
@@ -474,6 +475,7 @@ export default function ChatInterface() {
                       content: messageText,
                     },
                   ],
+                  character: selectedCharacter,
                 }),
               })
                 .then((res) => {
@@ -596,6 +598,7 @@ export default function ChatInterface() {
                       content: messageText,
                     },
                   ],
+                  character: selectedCharacter,
                 }),
               })
                 .then((res) => {
@@ -706,6 +709,7 @@ export default function ChatInterface() {
                       content: messageText,
                     },
                   ],
+                  character: selectedCharacter,
                 }),
               })
                 .then((res) => {
@@ -1068,14 +1072,18 @@ export default function ChatInterface() {
     }
   };
 
+  // 캐릭터별 배경 그라디언트 설정
+  const backgroundGradient = selectedCharacter === "jinyoung"
+    ? "linear-gradient(to top, rgba(255, 192, 203, 0.3) 0%, rgba(255, 182, 193, 0.15) 15%, transparent 25%)" // 루피: 밝은 핑크 그라디언트
+    : "linear-gradient(to top, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.2) 15%, transparent 20%)"; // 서아: 검은색 딤드
+  
   return (
     <>
       {/* 배경 하단 그라디언트 딤드 처리 */}
       <div
         className="fixed inset-0 pointer-events-none z-0"
         style={{
-          background:
-            "linear-gradient(to top, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.2) 15%, transparent 20%)",
+          background: backgroundGradient,
         }}
       />
 
@@ -1090,8 +1098,8 @@ export default function ChatInterface() {
         <button
           style={{
             display: "flex",
-            width: "40px",
-            height: "40px",
+            width: "56px",
+            height: "56px",
             padding: "10px",
             justifyContent: "center",
             alignItems: "center",
@@ -1105,7 +1113,7 @@ export default function ChatInterface() {
             setShowCharacterModal(true);
           }}
         >
-          <LayoutGrid className="w-5 h-5 text-[#1d1d1d]" fill="currentColor" />
+          <LayoutGrid className="w-6 h-6 text-[#1d1d1d]" fill="currentColor" />
         </button>
       </div>
 
@@ -1198,90 +1206,7 @@ export default function ChatInterface() {
                   width: "100%",
                 }}
               >
-                {/* 서아 캐릭터 (기본) */}
-                <div
-                  style={{
-                    display: "flex",
-                    flex: 1,
-                    flexDirection: "column",
-                    alignItems: "center",
-                    gap: "12px",
-                    cursor: "pointer",
-                  }}
-                  onClick={() => {
-                    setSelectedCharacter("test");
-                    setShowCharacterModal(false);
-                  }}
-                >
-                  <div
-                    style={{
-                      display: "flex",
-                      width: "100%",
-                      aspectRatio: "1 / 1.23",
-                      flexDirection: "column",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      borderRadius: "20px",
-                      border:
-                        selectedCharacter === "test"
-                          ? "2px solid #5A35EC"
-                          : "2px solid #EEE",
-                      background: "#FAFAFA",
-                      position: "relative",
-                      overflow: "hidden",
-                    }}
-                  >
-                    {/* 선택 체크마크 */}
-                    {selectedCharacter === "test" && (
-                      <div
-                        style={{
-                          position: "absolute",
-                          top: "12px",
-                          left: "12px",
-                          width: "32px",
-                          height: "32px",
-                          borderRadius: "50%",
-                          background: "#5A35EC",
-                          display: "flex",
-                          alignItems: "center",
-                          justifyContent: "center",
-                          zIndex: 10,
-                        }}
-                      >
-                        <Check size={24} color="#FFF" />
-                      </div>
-                    )}
-                    {/* 캐릭터 프리뷰 (서아) */}
-                    <Image
-                      src="/TestThumnbnail.jpg"
-                      alt="서아"
-                      fill
-                      style={{
-                        objectFit: "cover",
-                        objectPosition: "center 20%",
-                        borderRadius: "20px",
-                      }}
-                    />
-                  </div>
-                  <div
-                    style={{
-                      alignSelf: "stretch",
-                      color: "#1D1D1D",
-                      textAlign: "center",
-                      fontFamily:
-                        '"Noto Sans KR", "Pretendard Variable", Pretendard, sans-serif',
-                      fontSize: "18px",
-                      fontStyle: "normal",
-                      fontWeight: 500,
-                      lineHeight: "24px",
-                      letterSpacing: "-0.36px",
-                    }}
-                  >
-                    서아
-                  </div>
-                </div>
-
-                {/* 루피 캐릭터 */}
+                {/* 루피 캐릭터 (기본) */}
                 <div
                   style={{
                     display: "flex",
@@ -1308,7 +1233,7 @@ export default function ChatInterface() {
                       border:
                         selectedCharacter === "jinyoung"
                           ? "2px solid #5A35EC"
-                          : "2px solid #EEE",
+                          : "1px solid #EEE",
                       background: "#FAFAFA",
                       position: "relative",
                       overflow: "hidden",
@@ -1334,17 +1259,6 @@ export default function ChatInterface() {
                         <Check size={24} color="#FFF" />
                       </div>
                     )}
-                    {/* 캐릭터 프리뷰 (잔망 루피) */}
-                    <Image
-                      src="/zanmangLoopyThumnbnail.jpg"
-                      alt="루피"
-                      fill
-                      style={{
-                        objectFit: "cover",
-                        objectPosition: "center 30%",
-                        borderRadius: "20px",
-                      }}
-                    />
                   </div>
                   <div
                     style={{
@@ -1361,6 +1275,78 @@ export default function ChatInterface() {
                     }}
                   >
                     루피
+                  </div>
+                </div>
+
+                {/* 서아 캐릭터 */}
+                <div
+                  style={{
+                    display: "flex",
+                    flex: 1,
+                    flexDirection: "column",
+                    alignItems: "center",
+                    gap: "12px",
+                    cursor: "pointer",
+                  }}
+                  onClick={() => {
+                    setSelectedCharacter("test");
+                    setShowCharacterModal(false);
+                  }}
+                >
+                  <div
+                    style={{
+                      display: "flex",
+                      width: "100%",
+                      aspectRatio: "1 / 1.23",
+                      flexDirection: "column",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      borderRadius: "20px",
+                      border:
+                        selectedCharacter === "test"
+                          ? "2px solid #5A35EC"
+                          : "1px solid #EEE",
+                      background: "#FAFAFA",
+                      position: "relative",
+                      overflow: "hidden",
+                    }}
+                  >
+                    {/* 선택 체크마크 */}
+                    {selectedCharacter === "test" && (
+                      <div
+                        style={{
+                          position: "absolute",
+                          top: "12px",
+                          left: "12px",
+                          width: "32px",
+                          height: "32px",
+                          borderRadius: "50%",
+                          background: "#5A35EC",
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                          zIndex: 10,
+                        }}
+                      >
+                        <Check size={24} color="#FFF" />
+                      </div>
+                    )}
+                  </div>
+                  <div
+                    style={{
+                      alignSelf: "stretch",
+                      color: "#1D1D1D",
+                      textAlign: "center",
+                      fontFamily:
+                        '"Noto Sans KR", "Pretendard Variable", Pretendard, sans-serif',
+                      fontSize: "18px",
+                      fontStyle: "normal",
+                      fontWeight: 500,
+                      lineHeight: "24px",
+                      letterSpacing: "-0.36px",
+                    }}
+                  >
+                    서아
                   </div>
                 </div>
               </div>
@@ -1470,12 +1456,12 @@ export default function ChatInterface() {
           </div>
         </div>
       )}
-      <div className="fixed inset-0 pointer-events-none z-10 flex flex-col justify-end items-center pb-4 px-3 sm:pb-8 sm:px-4">
+      <div className="fixed inset-0 pointer-events-none z-10 flex flex-col justify-end items-center px-3 sm:px-4">
         {/* 듣는 중 인디케이터 / 답변 표시 */}
         {((listeningState === "listening" && !isMuted) ||
           isLoading ||
           showMessage) && (
-          <div className="w-full pointer-events-none flex justify-center" style={{ marginBottom: "40px" }}>
+          <div className="w-full pointer-events-none flex justify-center" style={{ marginBottom: "48px" }}>
             <div
               className="inline-flex flex-col justify-center items-start"
               style={{
@@ -1629,8 +1615,8 @@ export default function ChatInterface() {
               }
               className="flex flex-col justify-center items-center flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden transition-all duration-300 ease-in-out"
               style={{
-                width: inputValue.trim() ? "0px" : "56px",
-                height: "56px",
+                width: inputValue.trim() ? "0px" : "52px",
+                height: "52px",
                 marginRight: inputValue.trim() ? "0px" : "6px",
                 opacity: inputValue.trim() ? 0 : 1,
                 borderRadius: "16px",
@@ -1686,7 +1672,7 @@ export default function ChatInterface() {
                   setIsFocused(false);
                 }}
                 placeholder="무엇이든지 물어보세요."
-                className="flex-1 bg-transparent text-[#1d1d1d] placeholder-[#1d1d1d]/60 resize-none outline-none text-sm leading-relaxed max-h-32 scrollbar-hide"
+                className="flex-1 bg-transparent text-[#1d1d1d] placeholder-[#1d1d1d]/60 resize-none outline-none text-lg leading-relaxed max-h-32 scrollbar-hide"
                 rows={1}
                 disabled={isLoading || isAudioPlaying}
                 style={{
@@ -1706,7 +1692,7 @@ export default function ChatInterface() {
                   }
                 }}
                 disabled={isLoading || isAudioPlaying || (isFocused && !inputValue.trim())}
-                className="flex justify-center items-center flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed transition-all duration-200"
+                className="flex justify-center items-center flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed overflow-hidden transition-all duration-300 ease-in-out"
                 style={{
                   minWidth: isFocused || inputValue.trim() ? "48px" : "auto",
                   height: "48px",
@@ -1732,6 +1718,7 @@ export default function ChatInterface() {
                         fontWeight: 600,
                         lineHeight: "24px",
                         letterSpacing: "-0.32px",
+                        whiteSpace: "nowrap",
                       }}
                     >
                       대화
