@@ -1711,14 +1711,16 @@ export default function ChatInterface() {
                       </div>
                     )}
 
-                    {/* 썸네일 이미지 (오른쪽 배치) - 실제 배경 렌더링 */}
+                    {/* 썸네일 이미지 - 실제 배경 렌더링 */}
                     <div
                       style={{
                         position: "absolute",
+                        left: 0,
                         right: 0,
                         top: 0,
                         bottom: 0,
-                        width: "50%",
+                        width: "100%",
+                        height: "100%",
                         overflow: "hidden",
                       }}
                     >
@@ -1806,14 +1808,16 @@ export default function ChatInterface() {
                       </div>
                     )}
 
-                    {/* 썸네일 이미지 (오른쪽 배치) - 실제 배경 렌더링 */}
+                    {/* 썸네일 이미지 - 실제 배경 렌더링 */}
                     <div
                       style={{
                         position: "absolute",
+                        left: 0,
                         right: 0,
                         top: 0,
                         bottom: 0,
-                        width: "50%",
+                        width: "100%",
+                        height: "100%",
                         overflow: "hidden",
                       }}
                     >
