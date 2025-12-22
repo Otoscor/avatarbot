@@ -120,11 +120,11 @@ export default function Avatar() {
             const actions: Record<string, THREE.AnimationAction> = {};
             loadedGltf.animations.forEach((clip) => {
               const action = mixer.clipAction(clip);
-              action.setLoop(THREE.LoopRepeat, Infinity);
+              action.setLoop(THREE.LoopPingPong, Infinity); // 핑퐁 루핑: 앞으로 → 뒤로 자연스러운 왕복
               action.clampWhenFinished = false;
               action.timeScale = 0.1; // 느린 속도
               actions[clip.name] = action;
-              console.log(`📦 애니메이션 준비: ${clip.name}`);
+              console.log(`📦 애니메이션 준비: ${clip.name} (핑퐁 루핑)`);
             });
             glbActionsRef.current = actions;
             
