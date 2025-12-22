@@ -69,3 +69,25 @@ nextjs-portal {
     transform: translateY(0);
   }
 }
+
+/* 펄스 애니메이션 (부드러운 확대/축소) */
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.9;
+  }
+}
+
+/* 바운스 애니메이션 (위아래 흔들림) */
+@keyframes bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}

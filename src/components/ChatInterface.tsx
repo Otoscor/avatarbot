@@ -1197,90 +1197,65 @@ export default function ChatInterface() {
         }}
       />
 
-      {/* 대화 시작 버튼 (초기 인사말용) */}
+      {/* 전체 화면 터치로 대화 시작 (초기 인사말용) */}
       {showGreetingButton && (
-        <>
-          {/* 반투명 배경 (dimmed 강화 + blur 증가) */}
+        <div
+          onClick={handleStartConversation}
+          className="fixed inset-0 z-40 bg-black/60 flex flex-col items-center justify-center cursor-pointer"
+          style={{
+            backdropFilter: "blur(20px)",
+            animation: "fadeIn 0.5s ease-in-out",
+          }}
+        >
+          {/* 안내 텍스트 */}
           <div
-            className="fixed inset-0 z-30 bg-black/60"
+            className="flex flex-col items-center gap-4"
             style={{
-              backdropFilter: "blur(20px)",
+              animation: "pulse 2s ease-in-out infinite",
             }}
-          />
-          
-          {/* 버튼 컨테이너 */}
-          <div
-            className="fixed inset-0 z-40 flex flex-col items-center justify-center pointer-events-none"
           >
             <div
-              className="pointer-events-auto flex flex-col items-center gap-6"
               style={{
-                animation: "fadeIn 0.5s ease-in-out",
+                color: "#FFF",
+                fontFamily: '"Noto Sans KR", "Pretendard Variable", Pretendard, sans-serif',
+                fontSize: "24px",
+                fontWeight: 600,
+                lineHeight: "32px",
+                textAlign: "center",
+                textShadow: "0 2px 8px rgba(0, 0, 0, 0.3)",
+                padding: "0 20px",
               }}
             >
-              {/* 안내 텍스트 */}
-              <div
-                style={{
-                  color: "#FFF",
-                  fontFamily: '"Noto Sans KR", "Pretendard Variable", Pretendard, sans-serif',
-                  fontSize: "18px",
-                  fontWeight: 500,
-                  lineHeight: "28px",
-                  textAlign: "center",
-                  textShadow: "0 2px 8px rgba(0, 0, 0, 0.3)",
-                  padding: "0 20px",
-                }}
-              >
-                루피가 인사하고 싶어해요! 👋
-              </div>
-              
-              {/* 대화 시작 버튼 (대화 버튼 스타일 적용) */}
-              <button
-                onClick={handleStartConversation}
-                className="flex justify-center items-center transition-all duration-300 ease-in-out"
-                style={{
-                  height: "48px",
-                  padding: "0 24px",
-                  gap: "8px",
-                  borderRadius: "12px",
-                  background: "linear-gradient(180deg, #8569F2 0%, #5A35EC 100%)",
-                  boxShadow: "0 2px 4px 0 rgba(255, 255, 255, 0.25) inset",
-                  border: "none",
-                  cursor: "pointer",
-                  color: "#FFF",
-                  fontFamily: '"Pretendard Variable", Pretendard, sans-serif',
-                  fontSize: "16px",
-                  fontWeight: 500,
-                  lineHeight: "24px",
-                  letterSpacing: "-0.32px",
-                }}
-                onMouseEnter={(e) => {
-                  e.currentTarget.style.opacity = "0.9";
-                }}
-                onMouseLeave={(e) => {
-                  e.currentTarget.style.opacity = "1";
-                }}
-              >
-                대화 시작
-              </button>
-              
-              {/* 작은 설명 텍스트 */}
-              <div
-                style={{
-                  color: "rgba(255, 255, 255, 0.8)",
-                  fontFamily: '"Noto Sans KR", "Pretendard Variable", Pretendard, sans-serif',
-                  fontSize: "14px",
-                  fontWeight: 400,
-                  lineHeight: "20px",
-                  textAlign: "center",
-                  textShadow: "0 2px 4px rgba(0, 0, 0, 0.3)",
-                }}
-              >
-                클릭하면 루피의 목소리를 들을 수 있어요
-              </div>
+              루피가 인사하고 싶어해요! 👋
+            </div>
+            
+            {/* 터치 안내 */}
+            <div
+              style={{
+                color: "rgba(255, 255, 255, 0.9)",
+                fontFamily: '"Noto Sans KR", "Pretendard Variable", Pretendard, sans-serif',
+                fontSize: "16px",
+                fontWeight: 400,
+                lineHeight: "24px",
+                textAlign: "center",
+                textShadow: "0 2px 4px rgba(0, 0, 0, 0.3)",
+              }}
+            >
+              화면을 터치하여 시작하세요
+            </div>
+            
+            {/* 터치 아이콘 애니메이션 */}
+            <div
+              style={{
+                marginTop: "16px",
+                fontSize: "48px",
+                animation: "bounce 1.5s ease-in-out infinite",
+              }}
+            >
+              👆
             </div>
           </div>
-        </>
+        </div>
       )}
 
       {/* 우상단 캐릭터 선택 버튼 */}
