@@ -126,6 +126,7 @@ export default function ChatHistory() {
     <div className="flex flex-col h-screen overflow-hidden bg-[#f5f5f5]" style={{ border: "none" }}>
       {/* 헤더 */}
       <div
+        className="fixed top-0 left-0 right-0 z-20"
         style={{
           width: "100%",
           paddingTop: "16px",
@@ -161,7 +162,7 @@ export default function ChatHistory() {
       </div>
       
       {/* 채팅 메시지 영역 */}
-      <div className="flex-1 overflow-y-auto px-5 pb-4" style={{ paddingTop: "24px" }}>
+      <div className="flex-1 overflow-y-auto px-5" style={{ paddingTop: "120px", paddingBottom: "180px" }}>
         <div className="max-w-2xl mx-auto space-y-4">
           {messages.length === 0 ? (
             <div className="flex items-center justify-center h-full">
@@ -291,7 +292,7 @@ export default function ChatHistory() {
 
       {/* 입력창 배경 */}
       <div
-        className="w-full flex flex-col justify-start items-center px-5"
+        className="fixed bottom-0 left-0 right-0 w-full flex flex-col justify-start items-center px-5 z-10"
         style={{
           paddingTop: "24px",
           paddingBottom: "48px",
